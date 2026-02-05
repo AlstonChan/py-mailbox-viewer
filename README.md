@@ -50,7 +50,11 @@ See `requirements.txt` for the Python dependencies used by the project.
 
 If you used `python -m venv` instead of `py -3.12`, replace the `py -3.12 -m pip` calls with the `python` from the activated venv.
 
-Run the application with `py ./src/main.py`
+Run the application with `py ./src/app.py`
+
+## References
+
+- [RFC5322](https://datatracker.ietf.org/doc/html/rfc5322.html) - Defines how an email header should be
 
 ## License
 

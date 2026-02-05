@@ -13,37 +13,114 @@
 # limitations under the License.
 
 import sys
-import random
-from PySide6 import QtCore, QtWidgets, QtGui
+from PySide6.QtWidgets import (
+    QApplication,
+    QMainWindow,
+    QWidget,
+    QFileDialog,
+    QListWidget,
+    QTextEdit,
+    QSplitter,
+    QVBoxLayout,
+    QMessageBox,
+)
+from PySide6.QtGui import QAction
+from PySide6.QtCore import Qt
+
+from ui_main_window import Ui_MainWindow
+from ui_selection_bar import Ui_SelectionBarWidget
 
 
-class MyWidget(QtWidgets.QWidget):
-    def __init__(self):
-        super().__init__()
+class MainWindow(QMainWindow, Ui_MainWindow):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setupUi(self)
 
-        self.hello = ["Hallo Welt", "Hei maailma", "Hola Mundo", "Привет мир"]
+        self._setup_ui_elements()
+        self._connect_actions()
+        self._populate_selection_bar()
 
-        self.button = QtWidgets.QPushButton("Click me!")
-        self.text = QtWidgets.QLabel(
-            "Hello World", alignment=QtCore.Qt.AlignmentFlag.AlignCenter
-        )
+        self.emails = []
+        self.statusBar().showMessage("Ready")
 
-        layout = QtWidgets.QVBoxLayout(self)
-        layout.addWidget(self.text)
-        layout.addWidget(self.button)
+    def _setup_ui_elements(self):
+        # The QListWidget and QTextEdit are no longer needed as selection bars are used.
+        pass
 
-        self.button.clicked.connect(self.magic)
+    def _populate_selection_bar(self):
+        # Create a QVBoxLayout for the scrollAreaWidgetContents to hold selection bars
+        self.selectionBarLayout = QVBoxLayout(self.scrollAreaWidgetContents)
+        self.selectionBarLayout.setContentsMargins(0, 0, 0, 0)
+        self.selectionBarLayout.setSpacing(5)  # Add some spacing between selection bars
 
-    @QtCore.Slot()
-    def magic(self):
-        self.text.setText(random.choice(self.hello))
+        for i in range(20):
+            selection_bar_container = QWidget()
+            selection_bar_ui = Ui_SelectionBarWidget()
+            selection_bar_ui.setupUi(selection_bar_container)
+            self.selectionBarLayout.addWidget(selection_bar_container)
 
+        # Add a stretch to push all selection bars to the top
+        self.selectionBarLayout.addStretch(1)
 
-if __name__ == "__main__":
-    app = QtWidgets.QApplication([])
+    def _connect_actions(self):
+        self.actionOpen.triggered.connect(self.open_file)
+        self.actionReload.triggered.connect(self.reload_data)
+        self.actionExit.triggered.connect(self.close)
+        self.actionSearch.triggered.connect(self.search_data)
+        self.actionFilter.triggered.connect(self.filter_data)
+        self.actionExport_Email.triggered.connect(self.export_email)
+        self.actionAbout.triggered.connect(self.show_about)
+        self.actionShortcuts.triggered.connect(self.show_shortcuts)
+        self.actionGitHub.triggered.connect(self.show_github)
+        self.actionToggle_preview_pane.triggered.connect(self.toggle_preview_pane)
+        self.actionZoom_in_out.triggered.connect(self.zoom_in_out)
+        self.actionShow_headers.triggered.connect(self.show_headers)
+        self.actionWrap_text.triggered.connect(self.wrap_text)
 
-    widget = MyWidget()
-    widget.resize(800, 600)
-    widget.show()
+    # ---------------- Logic ----------------
+    def open_file(self):
+        print("Open file action triggered - (load emails logic removed for now)")
 
-    sys.exit(app.exec())
+    def load_emails(self, path):
+        """
+        Temporary fake parser.
+        Replace this later with Thunderbird / mbox parsing.
+        """
+        return []  # Return empty list as per instruction
+
+    def show_email(self, row):
+        print(f"Show email for row {row} - (display logic removed for now)")
+        pass  # Display logic removed as per instruction
+
+    def reload_data(self):
+        print("Reload data action triggered")
+
+    def search_data(self):
+        print("Search data action triggered")
+
+    def filter_data(self):
+        print("Filter data action triggered")
+
+    def export_email(self):
+        print("Export email action triggered")
+
+    def show_about(self):
+        print("Show about action triggered")
+
+    def show_shortcuts(self):
+        print("Show shortcuts action triggered")
+
+    def show_github(self):
+        print("Show GitHub action triggered")
+
+    def toggle_preview_pane(self):
+        print("Toggle preview pane action triggered")
+
+    def zoom_in_out(self):
+        print("Zoom in/out action triggered")
+
+    def show_headers(self):
+        print("Show headers action triggered")
+
+    def wrap_text(self):
+        print("Wrap text action triggered")
