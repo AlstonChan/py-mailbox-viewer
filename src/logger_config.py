@@ -36,7 +36,7 @@ def setup_logging():
     log_file_path = os.path.join(log_dir, "app.log")
 
     _logger_instance = logging.getLogger(APP_NAME)
-    _logger_instance.setLevel(logging.INFO)
+    _logger_instance.setLevel(logging.DEBUG)
 
     if _logger_instance.hasHandlers():
         _logger_instance.handlers.clear()

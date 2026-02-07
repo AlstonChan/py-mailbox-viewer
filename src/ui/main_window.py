@@ -31,6 +31,7 @@ from PySide6.QtWidgets import (
     QStatusBar,
     QTabWidget,
     QWidget,
+    QVBoxLayout,
 )
 from constants import APP_NAME
 
@@ -161,6 +162,11 @@ class Ui_MainWindow(object):
         self.scrollAreaWidgetContents.setSizePolicy(scrollAreaWidgetContentsSizePolicy)
         self.scrollAreaLeft.setWidget(self.scrollAreaWidgetContents)
         self.splitterMain.addWidget(self.scrollAreaLeft)
+
+        # Initialize selectionBarLayout here or in a dedicated setup method
+        self.selectionBarLayout = QVBoxLayout(self.scrollAreaWidgetContents)
+        self.selectionBarLayout.setContentsMargins(0, 0, 0, 0)
+        self.selectionBarLayout.setSpacing(5)  # Add some spacing between selection bars
 
     def _setup_right_panel(self, MainWindow):
         self.frameRight = QFrame(self.splitterMain)
