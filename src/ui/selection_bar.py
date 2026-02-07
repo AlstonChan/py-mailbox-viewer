@@ -33,7 +33,7 @@ from ui.common.ellipsis_label import EllipsisLabel
 class SelectionBarWidget(QWidget):
     """
     A custom QWidget that acts as a clickable selection bar for an email.
-    It displays summary information and changes appearance on hover.
+    It displays summary information and changes appearance on hover and selection.
     """
 
     clicked = Signal(int)  # Emits the index of this selection bar when clicked
@@ -42,9 +42,10 @@ class SelectionBarWidget(QWidget):
         super().__init__(parent)
         self.index = index
         self._is_hovered = False  # Internal state for hover effect
+        self._is_active = False # Internal state for active/selected email
 
         self._setup_ui()
-        self._apply_default_style()
+        self._apply_default_style() # Apply default style initially
 
     def _setup_ui(self):
         if not self.objectName():
@@ -226,16 +227,46 @@ class SelectionBarWidget(QWidget):
             """
         )
 
+    def _apply_active_style(self):
+        # Active style for frameMain
+        self.frameMain.setStyleSheet(
+            """
+                QFrame#frameMain {
+                    border: 2px solid palette(highlight);
+                    border-radius: 4px;
+                    background-color: palette(highlight);
+                    color: palette(window-text);
+                }
+            """
+        )
+
+    def set_active(self, active: bool) -> None:
+        """
+        Sets the active state of the selection bar.
+        When active, it uses the active style; otherwise, it determines style based on hover state.
+        """
+        self._is_active = active
+        if active:
+            self._apply_active_style()
+        else:
+            # If no longer active, re-apply hover or default based on current mouse position
+            if self._is_hovered:
+                self._apply_hover_style()
+            else:
+                self._apply_default_style()
+
     def enterEvent(self, event):
         """Event handler for mouse entering the widget area."""
         self._is_hovered = True
-        self._apply_hover_style()
+        if not self._is_active: # Only apply hover if not active
+            self._apply_hover_style()
         super().enterEvent(event)
 
     def leaveEvent(self, event):
         """Event handler for mouse leaving the widget area."""
         self._is_hovered = False
-        self._apply_default_style()
+        if not self._is_active: # Only apply default if not active
+            self._apply_default_style()
         super().leaveEvent(event)
 
     def mousePressEvent(self, event):

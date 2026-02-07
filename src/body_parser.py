@@ -29,6 +29,8 @@ def _extract_body_parts(
     plain_body = None
     html_body = None
 
+    logger.debug("Extracting body parts from email message.")
+
     try:
         # Get raw body
         raw_body = msg.as_string()

@@ -32,6 +32,7 @@ from PySide6.QtWidgets import (
     QTabWidget,
     QWidget,
     QVBoxLayout,
+    QTextEdit,
 )
 from constants import APP_NAME
 
@@ -149,6 +150,9 @@ class Ui_MainWindow(object):
         self.scrollAreaLeft.setSizePolicy(leftScrollAreaSizePolicy)
         self.scrollAreaLeft.setMinimumSize(QSize(150, 0))
         self.scrollAreaLeft.setWidgetResizable(True)
+        self.scrollAreaLeft.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
         self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 198, 601))
@@ -207,6 +211,7 @@ class Ui_MainWindow(object):
         self.splitterEmail.setObjectName("splitterEmail")
         self.splitterEmail.setOrientation(Qt.Orientation.Vertical)
 
+        # Setup Mail Header Frame
         self.frameMailHeader = QFrame(self.splitterEmail)
         self.frameMailHeader.setObjectName("frameMailHeader")
         mailHeaderFrameSizePolicy = QSizePolicy(
@@ -223,6 +228,7 @@ class Ui_MainWindow(object):
         self.frameMailHeader.setFrameShadow(QFrame.Shadow.Plain)
         self.splitterEmail.addWidget(self.frameMailHeader)
 
+        # Setup Mail Body Tabs
         self.tabMailBody = QTabWidget(self.splitterEmail)
         self.tabMailBody.setObjectName("tabMailBody")
         mailBodyTabSizePolicy = QSizePolicy(
@@ -236,16 +242,48 @@ class Ui_MainWindow(object):
         self.tabMailBody.setSizePolicy(mailBodyTabSizePolicy)
         self.tabMailBody.setMinimumSize(QSize(200, 20))
         self.tabMailBody.setTabShape(QTabWidget.TabShape.Rounded)
+
+        # Setup HTML Tab
         self.tabHtml = QWidget()
         self.tabHtml.setObjectName("tabHtml")
         self.tabMailBody.addTab(self.tabHtml, "HTML")
+        self.htmlBodyLayout = QVBoxLayout(self.tabHtml)
+        self.htmlBodyLayout.setObjectName("htmlBodyLayout")
+        self.htmlBodyLayout.setContentsMargins(0, 0, 0, 0)
+        self.textEditHtml = QTextEdit(self.tabHtml)
+        self.textEditHtml.setObjectName("textEditHtml")
+        self.textEditHtml.setReadOnly(True)
+        self.textEditHtml.setContentsMargins(0, 0, 0, 0)
+        self.htmlBodyLayout.addWidget(self.textEditHtml)
+
+        # Setup Plain Text Tab
         self.tabPlainText = QWidget()
         self.tabPlainText.setObjectName("tabPlainText")
         self.tabMailBody.addTab(self.tabPlainText, "Plain")
+        self.plainTextBodyLayout = QVBoxLayout(self.tabPlainText)
+        self.plainTextBodyLayout.setObjectName("plainTextBodyLayout")
+        self.plainTextBodyLayout.setContentsMargins(0, 0, 0, 0)
+        self.textEditPlain = QTextEdit(self.tabPlainText)
+        self.textEditPlain.setObjectName("textEditPlain")
+        self.textEditPlain.setReadOnly(True)
+        self.textEditPlain.setContentsMargins(0, 0, 0, 0)
+        self.plainTextBodyLayout.addWidget(self.textEditPlain)
+
+        # Setup Raw MIME Tab
         self.tabRawMime = QWidget()
         self.tabRawMime.setObjectName("tabRawMime")
         self.tabMailBody.addTab(self.tabRawMime, "Raw")
+        self.rawMimeBodyLayout = QVBoxLayout(self.tabRawMime)
+        self.rawMimeBodyLayout.setObjectName("rawMimeBodyLayout")
+        self.rawMimeBodyLayout.setContentsMargins(0, 0, 0, 0)
+        self.textEditRaw = QTextEdit(self.tabRawMime)
+        self.textEditRaw.setObjectName("textEditRaw")
+        self.textEditRaw.setReadOnly(True)
+        self.textEditRaw.setContentsMargins(0, 0, 0, 0)
+        self.rawMimeBodyLayout.addWidget(self.textEditRaw)
+
         self.splitterEmail.addWidget(self.tabMailBody)
+        self.splitterEmail.setSizes([400, 900])
 
     def _setup_menu_bar(self, MainWindow):
         self.menubar = QMenuBar(MainWindow)

@@ -14,18 +14,13 @@
 
 import mailbox
 import email.utils
-from typing import List
+from typing import List, Optional
+import time
 
-from PySide6.QtCore import (
-    Qt,
-)
 from PySide6.QtWidgets import (
-    QApplication,
     QMainWindow,
-    QWidget,
     QFileDialog,
     QMessageBox,
-    QVBoxLayout,
 )
 
 from ui.main_window import Ui_MainWindow
@@ -45,16 +40,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setupUi(self)
-        self.scrollAreaLeft.setHorizontalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
-        )  # Disable horizontal scrollbar
 
         self._connect_actions()
 
         self.emails: List[MailMessage] = []  # Initialize emails list
-        self.statusBar().showMessage("Ready")
+        self._current_active_selection_bar: Optional[SelectionBarWidget] = None
+        self._selection_bar_widgets: List[SelectionBarWidget] = []
 
-    # Removed _setup_ui_elements method
+        self.statusBar().showMessage("Ready")
 
     def _clear_and_load_emails_into_selection_bar(
         self, emails: List[MailMessage]
@@ -65,6 +58,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         """
         # Clear existing widgets from the layout
         clear_layout(self.selectionBarLayout)  # Using clear_layout from utils
+        self._selection_bar_widgets.clear()  # Clear references to old widgets                                                                      │
+        self._current_active_selection_bar = None  # Clear active selection
 
         # Add new selection bars
         if not emails:
@@ -79,6 +74,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             selection_bar_widget.clicked.connect(self.show_email_details)
 
             self.selectionBarLayout.addWidget(selection_bar_widget)
+            self._selection_bar_widgets.append(
+                selection_bar_widget
+            )  # Store widget reference
 
         # Add a stretch to push all selection bars to the top
         self.selectionBarLayout.addStretch(1)
@@ -99,7 +97,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.actionWrap_text.triggered.connect(self.wrap_text)
 
     # ---------------- Logic ----------------
-    def open_file(self):
+    def open_file(self) -> None:
         file_dialog: QFileDialog = QFileDialog(self)
         file_dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
         file_dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
@@ -193,27 +191,59 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             )
         return []
 
-    # Renamed from show_email
     def show_email_details(self, index: int):
         """
-        Displays the details of the selected email.
+        Displays the details of the selected email in the respective QTextEdit widgets.
         """
         if 0 <= index < len(self.emails):
             mail_message = self.emails[index]
+            self.active_mail_index = index
+
+            if self._current_active_selection_bar is not None:
+                self._current_active_selection_bar.set_active(False)
+
+            newly_active_bar = self._selection_bar_widgets[index]
+            newly_active_bar.set_active(True)
+            self._current_active_selection_bar = newly_active_bar
+
             logger.debug(f"Showing details for email: {mail_message.subject}")
-            # Placeholder: In a real app, you'd populate a QTextEdit or similar
-            # For example: self.email_text_viewer.setHtml(mail_message.html_body or mail_message.plain_body)
-            # For now, just logging the body content to show it's working
-            # print("\n--- RAW BODY ---")
-            # print(mail_message.raw_body)
-            # print("\n--- PLAIN BODY ---")
-            # print(mail_message.plain_body)
-            # print("\n--- HTML BODY ---")
-            # print(mail_message.html_body)
+            start_time = time.perf_counter()
+
+            # Populate HTML tab
+            if mail_message.html_body:
+                self.textEditHtml.setHtml(mail_message.html_body)
+            else:
+                self.textEditHtml.setPlainText("HTML content not available.")
+
+            # Populate Plain Text tab
+            if mail_message.plain_body:
+                self.textEditPlain.setPlainText(mail_message.plain_body)
+            else:
+                self.textEditPlain.setPlainText("Plain text content not available.")
+
+            # Populate Raw MIME tab
+            if mail_message.raw_body:
+                self.textEditRaw.setPlainText(mail_message.raw_body)
+            else:
+                self.textEditRaw.setPlainText("Raw MIME content not available.")
+
+            end_time = time.perf_counter()
+            duration = end_time - start_time
+            logger.debug(
+                f"Email details displayed in {duration:.4f} seconds for email: {mail_message.subject}"
+            )
+            self.statusBar().showMessage(
+                f"Loaded email details in {duration*1000:.2f} ms."
+            )
+
         else:
             logger.warning(
                 f"Attempted to show email details for invalid index: {index}"
             )
+            # Clear content if index is invalid
+            self.textEditHtml.setPlainText("")
+            self.textEditPlain.setPlainText("")
+            self.textEditRaw.setPlainText("")
 
     def reload_data(self):
         logger.debug("Reload data action triggered")
