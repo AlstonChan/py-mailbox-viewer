@@ -12,12 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from PySide6.QtCore import (
-    Qt,
-)
-from PySide6.QtGui import (
-    QFont,
-)
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QFormLayout,
     QFrame,
@@ -29,33 +25,55 @@ from PySide6.QtWidgets import (
     QSpacerItem,
     QWidget,
 )
+from mail_message import MailMessage
+from utils import format_bytes
+from ui.common.ellipsis_label import EllipsisLabel
 
 
-class Ui_SelectionBarWidget(object):
-    def setupUi(self, SelectionBarWidget):
-        if not SelectionBarWidget.objectName():
-            SelectionBarWidget.setObjectName("SelectionBarWidget")
+class SelectionBarWidget(QWidget):
+    """
+    A custom QWidget that acts as a clickable selection bar for an email.
+    It displays summary information and changes appearance on hover.
+    """
 
-        self._setup_base_widget_properties(SelectionBarWidget)
-        self._setup_main_frame_and_layouts(
-            SelectionBarWidget
-        )  # This method will setup frameMain and all layouts
-        self._setup_labels(SelectionBarWidget)
+    clicked = Signal(int)  # Emits the index of this selection bar when clicked
 
-    def _setup_base_widget_properties(self, SelectionBarWidget):
-        SelectionBarWidget.setWindowModality(Qt.WindowModality.NonModal)
-        SelectionBarWidget.resize(330, 56)
-        SelectionBarWidget.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        SelectionBarWidget.setContextMenuPolicy(Qt.ContextMenuPolicy.PreventContextMenu)
+    def __init__(self, index: int, parent=None):
+        super().__init__(parent)
+        self.index = index
+        self._is_hovered = False  # Internal state for hover effect
 
-    def _setup_main_frame_and_layouts(self, SelectionBarWidget):
+        self._setup_ui()
+        self._apply_default_style()
+
+    def _setup_ui(self):
+        if not self.objectName():
+            self.setObjectName("SelectionBarWidget")
+
+        self._setup_base_widget_properties()
+        self._setup_main_frame_and_layouts()
+        self._setup_labels()
+
+    def _setup_base_widget_properties(self):
+        self.setWindowModality(Qt.WindowModality.NonModal)
+        self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.PreventContextMenu)
+        self.setMouseTracking(
+            True
+        )  # Enable mouse tracking for hover events on the widget itself
+        self.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+        )  # Allow horizontal expansion, but not forcing
+        self.setMinimumWidth(1)  # Allow to shrink very small if needed
+
+    def _setup_main_frame_and_layouts(self):
         # Setup gridLayout first, as frameMain will be added to it
-        self.gridLayout = QGridLayout(SelectionBarWidget)
+        self.gridLayout = QGridLayout(self)
         self.gridLayout.setObjectName("gridLayout")
         self.gridLayout.setContentsMargins(0, 0, 0, 0)
 
         # Setup frameMain
-        self.frameMain = QFrame(SelectionBarWidget)
+        self.frameMain = QFrame(self)
         self.frameMain.setObjectName("frameMain")
         sizePolicy = QSizePolicy(
             QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred
@@ -67,6 +85,7 @@ class Ui_SelectionBarWidget(object):
         self.frameMain.setAutoFillBackground(False)
         self.frameMain.setFrameShape(QFrame.Shape.Box)
         self.frameMain.setFrameShadow(QFrame.Shadow.Plain)
+        self.frameMain.setMouseTracking(True)  # Enable mouse tracking for frameMain
 
         # Add frameMain to gridLayout
         self.gridLayout.addWidget(self.frameMain, 0, 0, 1, 1)
@@ -98,9 +117,9 @@ class Ui_SelectionBarWidget(object):
             QLayout.SizeConstraint.SetDefaultConstraint
         )
 
-    def _setup_labels(self, SelectionBarWidget):
+    def _setup_labels(self):
         font = QFont()
-        font.setPointSize(9)
+        font.setPointSize(8)
 
         sizePolicy1 = QSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
@@ -109,7 +128,7 @@ class Ui_SelectionBarWidget(object):
         sizePolicy1.setVerticalStretch(0)
 
         # Label Recipient
-        self.labelRecipient = QLabel(self.frameMain)
+        self.labelRecipient = EllipsisLabel("", self.frameMain)
         self.labelRecipient.setObjectName("labelRecipient")
         sizePolicy1.setHeightForWidth(
             self.labelRecipient.sizePolicy().hasHeightForWidth()
@@ -117,25 +136,25 @@ class Ui_SelectionBarWidget(object):
         self.labelRecipient.setSizePolicy(sizePolicy1)
         self.labelRecipient.setFont(font)
         self.labelRecipient.setAutoFillBackground(False)
-        self.labelRecipient.setWordWrap(True)
         self.labelRecipient.setMargin(0)
-        self.labelRecipient.setText("Name <email>")  # Set text directly
+        self.labelRecipient.setText("Name <email>")
         self.hBoxLayoutTop.addWidget(self.labelRecipient)
 
         # Label DateTime
         self.labelDateTime = QLabel(self.frameMain)
         self.labelDateTime.setObjectName("labelDateTime")
-        sizePolicy = (
-            QSizePolicy(  # This sizePolicy is locally defined, matching original code
-                QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred
-            )
+        sizePolicy = QSizePolicy(
+            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred
         )
         sizePolicy.setHeightForWidth(
             self.labelDateTime.sizePolicy().hasHeightForWidth()
         )
         self.labelDateTime.setSizePolicy(sizePolicy)
         self.labelDateTime.setFont(font)
-        self.labelDateTime.setText("00:00 PM")  # Set text directly
+        self.labelDateTime.setText("00:00 PM")
+        self.labelDateTime.setAlignment(
+            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignTop
+        )
         self.hBoxLayoutTop.addWidget(self.labelDateTime)
 
         self.formLayout.setLayout(
@@ -146,7 +165,7 @@ class Ui_SelectionBarWidget(object):
         )
 
         # Label Subject
-        self.labelSubject = QLabel(self.frameMain)
+        self.labelSubject = EllipsisLabel("", self.frameMain)
         self.labelSubject.setObjectName("labelSubject")
         sizePolicy1.setHeightForWidth(
             self.labelSubject.sizePolicy().hasHeightForWidth()
@@ -154,25 +173,93 @@ class Ui_SelectionBarWidget(object):
         self.labelSubject.setSizePolicy(sizePolicy1)
         self.labelSubject.setFont(font)
         self.labelSubject.setAutoFillBackground(False)
-        self.labelSubject.setWordWrap(True)
         self.labelSubject.setMargin(0)
-        self.labelSubject.setText("Email Subject")  # Set text directly
+
         self.hBoxLayoutBottom.addWidget(self.labelSubject)
+
+        self.labelSubject.setAlignment(
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+        )
+        self.labelSubject.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse
+        )
+        self.labelSubject.setStyleSheet("padding-right: 6px;")
 
         # Label Size
         self.labelSize = QLabel(self.frameMain)
         self.labelSize.setObjectName("labelSize")
-        sizePolicy = (
-            QSizePolicy(  # This sizePolicy is locally defined, matching original code
-                QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred
-            )
+        sizePolicy = QSizePolicy(
+            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred
         )
         sizePolicy.setHeightForWidth(self.labelSize.sizePolicy().hasHeightForWidth())
         self.labelSize.setSizePolicy(sizePolicy)
         self.labelSize.setFont(font)
-        self.labelSize.setText("7KB")  # Set text directly
+        self.labelSize.setText("7KB")
         self.hBoxLayoutBottom.addWidget(self.labelSize)
 
         self.formLayout.setLayout(
             2, QFormLayout.ItemRole.SpanningRole, self.hBoxLayoutBottom
         )
+
+    def _apply_default_style(self):
+        self.frameMain.setStyleSheet(
+            """
+            QFrame#frameMain {
+                border: 2px solid palette(mid);
+                border-radius: 4px;
+                background-color: palette(mid);
+                color: palette(mid-text);
+            }
+            """
+        )
+
+    def _apply_hover_style(self):
+        # Hover style for frameMain
+        self.frameMain.setStyleSheet(
+            """
+                QFrame#frameMain {
+                    border: 2px solid palette(highlight);
+                    border-radius: 4px;
+                    background-color: palette(alternate-base);
+                    color: palette(window-text);
+                }
+            """
+        )
+
+    def enterEvent(self, event):
+        """Event handler for mouse entering the widget area."""
+        self._is_hovered = True
+        self._apply_hover_style()
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        """Event handler for mouse leaving the widget area."""
+        self._is_hovered = False
+        self._apply_default_style()
+        super().leaveEvent(event)
+
+    def mousePressEvent(self, event):
+        """Event handler for mouse press."""
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.clicked.emit(self.index)
+        super().mousePressEvent(event)
+
+    def set_email_data(self, mail_message: MailMessage) -> None:
+        """
+        Populates the selection bar labels with data from a MailMessage object.
+        """
+        sender_display = mail_message.sender or mail_message.from_ or "Unknown Sender"
+        sender_display = sender_display.replace('"', "")
+
+        subject_display = mail_message.subject or "No Subject"
+        date_display = (
+            mail_message.date_header.strftime("%Y/%m/%d %H:%M")
+            if mail_message.date_header
+            else (mail_message.date or "No Date")
+        )
+        size_display = format_bytes(mail_message.size)
+
+        self.labelRecipient.setText(sender_display)
+        self.labelSubject.setText(subject_display)
+        self.labelDateTime.setText(date_display)
+        self.labelSize.setText(size_display)

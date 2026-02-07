@@ -42,7 +42,7 @@ class Ui_MainWindow(object):
             MainWindow.setObjectName("MainWindow")
 
         MainWindow.setWindowTitle(f"{APP_NAME} v1.0.0")
-        MainWindow.resize(900, 650)
+        MainWindow.resize(1200, 650)
 
         self._setup_actions(MainWindow)
         self._setup_central_widget(MainWindow)
@@ -132,6 +132,7 @@ class Ui_MainWindow(object):
         self._setup_right_panel(MainWindow)
 
         self.centralWidgetGridLayout.addWidget(self.splitterMain, 0, 0, 1, 1)
+        self.splitterMain.setSizes([700, 900])
         MainWindow.setCentralWidget(self.central_widget)
 
     def _setup_left_panel(self, MainWindow):
@@ -140,13 +141,13 @@ class Ui_MainWindow(object):
         leftScrollAreaSizePolicy = QSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
         )
-        leftScrollAreaSizePolicy.setHorizontalStretch(35)
-        leftScrollAreaSizePolicy.setVerticalStretch(50)
+        # leftScrollAreaSizePolicy.setHorizontalStretch(2)
+        leftScrollAreaSizePolicy.setVerticalStretch(2)
         leftScrollAreaSizePolicy.setHeightForWidth(
             self.scrollAreaLeft.sizePolicy().hasHeightForWidth()
         )
         self.scrollAreaLeft.setSizePolicy(leftScrollAreaSizePolicy)
-        self.scrollAreaLeft.setMinimumSize(QSize(200, 0))
+        self.scrollAreaLeft.setMinimumSize(QSize(150, 0))
         self.scrollAreaLeft.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
@@ -154,8 +155,8 @@ class Ui_MainWindow(object):
         scrollAreaWidgetContentsSizePolicy = QSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
         )
-        scrollAreaWidgetContentsSizePolicy.setHorizontalStretch(100)
-        scrollAreaWidgetContentsSizePolicy.setVerticalStretch(100)
+        scrollAreaWidgetContentsSizePolicy.setHorizontalStretch(1)
+        scrollAreaWidgetContentsSizePolicy.setVerticalStretch(0)
         scrollAreaWidgetContentsSizePolicy.setHeightForWidth(
             self.scrollAreaWidgetContents.sizePolicy().hasHeightForWidth()
         )
@@ -163,9 +164,19 @@ class Ui_MainWindow(object):
         self.scrollAreaLeft.setWidget(self.scrollAreaWidgetContents)
         self.splitterMain.addWidget(self.scrollAreaLeft)
 
+        self.scrollAreaWidgetContents.setStyleSheet(
+            """
+                QWidget#scrollAreaWidgetContents {
+                    background-color: palette(shadow);
+                    border-radius: 10px;
+                    border: 1px solid palette(mid);
+                }
+            """
+        )
+
         # Initialize selectionBarLayout here or in a dedicated setup method
         self.selectionBarLayout = QVBoxLayout(self.scrollAreaWidgetContents)
-        self.selectionBarLayout.setContentsMargins(0, 0, 0, 0)
+        self.selectionBarLayout.setContentsMargins(4, 4, 4, 4)
         self.selectionBarLayout.setSpacing(5)  # Add some spacing between selection bars
 
     def _setup_right_panel(self, MainWindow):
@@ -174,7 +185,7 @@ class Ui_MainWindow(object):
         rightFrameSizePolicy = QSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
         )
-        rightFrameSizePolicy.setHorizontalStretch(50)
+        # rightFrameSizePolicy.setHorizontalStretch(0)
         rightFrameSizePolicy.setVerticalStretch(0)
         rightFrameSizePolicy.setHeightForWidth(
             self.frameRight.sizePolicy().hasHeightForWidth()

@@ -16,6 +16,9 @@ import mailbox
 import email.utils
 from typing import List
 
+from PySide6.QtCore import (
+    Qt,
+)
 from PySide6.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -24,43 +27,34 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QVBoxLayout,
 )
-from PySide6.QtGui import QAction  # Keep QAction, as it's used in _connect_actions
-from PySide6.QtCore import Qt, Signal  # Import Signal for custom signals
 
 from ui.main_window import Ui_MainWindow
-from ui.selection_bar import Ui_SelectionBarWidget
+from ui.selection_bar import (
+    SelectionBarWidget,
+)
 from logger_config import logger
 from mail_message import MailMessage
 from body_parser import create_mbox_body_content_provider
-from utils import clear_layout, format_bytes, parse_email_date
-
-
-# Custom QWidget to handle clicks for selection bar
-class ClickableSelectionBar(QWidget):
-    clicked = Signal(int)  # Signal to emit when clicked, passing its index
-
-    def __init__(self, index: int, parent=None):
-        super().__init__(parent)
-        self.index = index
-        # This allows the mousePressEvent to be triggered
-        self.setMouseTracking(True)
-        self.setFocusPolicy(Qt.FocusPolicy.NoFocus)  # Don't take focus
-
-    def mousePressEvent(self, event):
-        if event.button() == Qt.LeftButton:
-            self.clicked.emit(self.index)
-        super().mousePressEvent(event)
+from utils import (
+    clear_layout,
+    parse_email_date,
+)
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setupUi(self)
+        self.scrollAreaLeft.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )  # Disable horizontal scrollbar
 
         self._connect_actions()
 
         self.emails: List[MailMessage] = []  # Initialize emails list
         self.statusBar().showMessage("Ready")
+
+    # Removed _setup_ui_elements method
 
     def _clear_and_load_emails_into_selection_bar(
         self, emails: List[MailMessage]
@@ -70,7 +64,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         with MailMessage objects.
         """
         # Clear existing widgets from the layout
-        clear_layout(self.selectionBarLayout)
+        clear_layout(self.selectionBarLayout)  # Using clear_layout from utils
 
         # Add new selection bars
         if not emails:
@@ -78,35 +72,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             return
 
         for index, mail_message in enumerate(emails):
-            # Use custom ClickableSelectionBar
-            selection_bar_container = ClickableSelectionBar(
+            selection_bar_widget = SelectionBarWidget(
                 index, self.scrollAreaWidgetContents
             )
-            selection_bar_ui = Ui_SelectionBarWidget()
-            selection_bar_ui.setupUi(selection_bar_container)
+            selection_bar_widget.set_email_data(mail_message)
+            selection_bar_widget.clicked.connect(self.show_email_details)
 
-            # Populate with MailMessage data
-            # Use 'or "N/A"' for optional fields
-            sender_display = (
-                mail_message.sender or mail_message.from_ or "Unknown Sender"
-            )
-            subject_display = mail_message.subject or "No Subject"
-            date_display = (
-                mail_message.date_header.strftime("%Y-%m-%d %H:%M")
-                if mail_message.date_header
-                else (mail_message.date or "No Date")
-            )
-            size_display = format_bytes(mail_message.size)
-
-            selection_bar_ui.labelRecipient.setText(sender_display)
-            selection_bar_ui.labelSubject.setText(subject_display)
-            selection_bar_ui.labelDateTime.setText(date_display)
-            selection_bar_ui.labelSize.setText(size_display)
-
-            # Connect click event
-            selection_bar_container.clicked.connect(self.show_email_details)
-
-            self.selectionBarLayout.addWidget(selection_bar_container)
+            self.selectionBarLayout.addWidget(selection_bar_widget)
 
         # Add a stretch to push all selection bars to the top
         self.selectionBarLayout.addStretch(1)
@@ -136,7 +108,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self,
             "Open Mailbox File",
             "",
-            "Mailbox Files (*.mbox *.msf *.eml);;All Files (*)",
+            "All Files (*);;Mailbox Files (*.mbox *.msf *.eml)",
         )
         if file_path:
             logger.debug(f"Opening file: {file_path}")
@@ -159,7 +131,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             mbox = mailbox.mbox(file_path)
             # If successful, proceed with mbox parsing
             logger.debug(f"Attempting to load {file_path} as MBOX.")
-            for key, message in mbox.items():
+            for (
+                key,
+                message,
+            ) in mbox.items():  # message is not used, so I can pass mbox and key
                 headers = {k: v for k, v in message.items()}
                 size = len(message.as_bytes())
 

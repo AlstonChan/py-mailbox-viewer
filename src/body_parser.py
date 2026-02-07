@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Optional, Tuple, Any
+from typing import Callable, Optional, Tuple
 from email.message import Message
-import mailbox  # Needed for mbox object type hint
+import mailbox
 from logger_config import logger
 
 
