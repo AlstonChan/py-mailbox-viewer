@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
+import mailbox
 from PySide6.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -29,6 +29,7 @@ from PySide6.QtCore import Qt
 
 from ui_main_window import Ui_MainWindow
 from ui_selection_bar import Ui_SelectionBarWidget
+from logger_config import logger
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
@@ -79,7 +80,20 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     # ---------------- Logic ----------------
     def open_file(self):
-        print("Open file action triggered - (load emails logic removed for now)")
+        file_dialog: QFileDialog = QFileDialog(self)
+        file_dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
+        file_dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
+
+        file_path, _ = file_dialog.getOpenFileName(
+            self,
+            "Open Mailbox File",
+            "",
+            "Mailbox Files (*.mbox *.msf *.eml);;All Files (*)",
+        )
+        if file_path:
+            logger.debug(f"Opening file: {file_path}")
+            self.emails = self.load_emails(file_path)
+            logger.info(f"Loaded {len(self.emails)} emails.")
 
     def load_emails(self, path):
         """
@@ -89,38 +103,38 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         return []  # Return empty list as per instruction
 
     def show_email(self, row):
-        print(f"Show email for row {row} - (display logic removed for now)")
+        logger.debug(f"Show email for row {row} - (display logic removed for now)")
         pass  # Display logic removed as per instruction
 
     def reload_data(self):
-        print("Reload data action triggered")
+        logger.debug("Reload data action triggered")
 
     def search_data(self):
-        print("Search data action triggered")
+        logger.debug("Search data action triggered")
 
     def filter_data(self):
-        print("Filter data action triggered")
+        logger.debug("Filter data action triggered")
 
     def export_email(self):
-        print("Export email action triggered")
+        logger.debug("Export email action triggered")
 
     def show_about(self):
-        print("Show about action triggered")
+        logger.debug("Show about action triggered")
 
     def show_shortcuts(self):
-        print("Show shortcuts action triggered")
+        logger.debug("Show shortcuts action triggered")
 
     def show_github(self):
-        print("Show GitHub action triggered")
+        logger.debug("Show GitHub action triggered")
 
     def toggle_preview_pane(self):
-        print("Toggle preview pane action triggered")
+        logger.debug("Toggle preview pane action triggered")
 
     def zoom_in_out(self):
-        print("Zoom in/out action triggered")
+        logger.debug("Zoom in/out action triggered")
 
     def show_headers(self):
-        print("Show headers action triggered")
+        logger.debug("Show headers action triggered")
 
     def wrap_text(self):
-        print("Wrap text action triggered")
+        logger.debug("Wrap text action triggered")

@@ -32,6 +32,7 @@ from PySide6.QtWidgets import (
     QTabWidget,
     QWidget,
 )
+from constants import APP_NAME
 
 
 class Ui_MainWindow(object):
@@ -39,7 +40,7 @@ class Ui_MainWindow(object):
         if not MainWindow.objectName():
             MainWindow.setObjectName("MainWindow")
 
-        MainWindow.setWindowTitle("py-mailbox-viewer v1.0.0")
+        MainWindow.setWindowTitle(f"{APP_NAME} v1.0.0")
         MainWindow.resize(900, 650)
 
         self._setup_actions(MainWindow)
