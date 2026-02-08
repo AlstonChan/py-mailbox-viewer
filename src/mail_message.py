@@ -1,6 +1,21 @@
+# Copyright 2026 Chan Alston
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+#     http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from typing import Callable, Dict, Any, List, Optional, Tuple
 from datetime import datetime
-import logging # Import logging for internal use
+from logger_config import logger
+
 
 class MailMessage:
     """
@@ -15,16 +30,18 @@ class MailMessage:
         self,
         headers: Dict[str, str],
         size: int,
-        # Renamed body_parser to _body_content_provider and changed its return type
-        _body_content_provider: Callable[[], Tuple[Optional[str], Optional[str], Optional[str]]],
-        # Optional metadata that might be extracted or passed for convenience
+        _body_content_provider: Callable[
+            [], Tuple[Optional[str], Optional[str], Optional[str]]
+        ],
         subject: Optional[str] = None,
-        sender: Optional[str] = None, # From parsed 'From' header
-        recipients: Optional[List[str]] = None, # From parsed 'To', 'Cc', 'Bcc' headers
-        date_header: Optional[datetime] = None, # Parsed 'Date' header
-        received_date: Optional[datetime] = None, # Parsed from a 'Received' header
+        sender: Optional[str] = None,
+        recipients: Optional[List[str]] = None,
+        date_header: Optional[datetime] = None,
+        received_date: Optional[datetime] = None,
         message_id: Optional[str] = None,
-        source_identifier: Optional[Any] = None, # Unique ID/path for the original source
+        source_identifier: Optional[
+            Any
+        ] = None,  # Unique ID/path for the original source
     ):
         """
         Initializes a MailMessage object.
@@ -47,13 +64,15 @@ class MailMessage:
         """
         self.headers = headers
         self.size = size
-        self._body_content_provider = _body_content_provider # Store the callable
+        self._body_content_provider = _body_content_provider  # Store the callable
 
         # Initialize caches for body content
         self._cached_raw_body: Optional[str] = None
         self._cached_plain_body: Optional[str] = None
         self._cached_html_body: Optional[str] = None
-        self._body_content_loaded: bool = False # Flag to track if content has been loaded
+        self._body_content_loaded: bool = (
+            False  # Flag to track if content has been loaded
+        )
 
         # Pre-extracted common fields for convenience
         self.subject = subject
@@ -75,19 +94,26 @@ class MailMessage:
                 self._cached_raw_body = raw
                 self._cached_plain_body = plain
                 self._cached_html_body = html
-                logging.debug(f"Body content loaded for {self.message_id or self.source_identifier}")
+                logger.debug(
+                    f"CACHE MISS, Body content loaded for {self.message_id or self.source_identifier}"
+                )
             except Exception as e:
-                logging.error(
+                logger.error(
                     f"Failed to load body content for message {self.message_id or self.source_identifier}: {e}",
-                    exc_info=True
+                    exc_info=True,
                 )
                 # Ensure caches are explicitly None on failure
                 self._cached_raw_body = None
                 self._cached_plain_body = None
                 self._cached_html_body = None
             finally:
-                self._body_content_loaded = True # Mark as loaded even if failed, to prevent repeated attempts
-
+                self._body_content_loaded = (
+                    True  # Mark as loaded even if failed, to prevent repeated attempts
+                )
+        else:
+            logger.debug(
+                f"CACHE HIT, Body content retrieved from cache for {self.message_id or self.source_identifier}"
+            )
 
     @property
     def raw_body(self) -> Optional[str]:
@@ -114,7 +140,9 @@ class MailMessage:
         For raw or HTML body, use .raw_body or .html_body properties.
         """
         self._load_body_content()
-        return self._cached_plain_body or "" # Return empty string if plain body is None
+        return (
+            self._cached_plain_body or ""
+        )  # Return empty string if plain body is None
 
     # --- Convenience properties for direct access to common raw headers ---
     @property

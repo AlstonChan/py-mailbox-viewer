@@ -114,9 +114,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             if self.emails:
                 logger.info(f"Loaded {len(self.emails)} emails from {file_path}.")
                 self.statusBar().showMessage(f"Loaded {len(self.emails)} emails.")
-                self._clear_and_load_emails_into_selection_bar(
-                    self.emails
-                )  # Populate selection bar
+                self._clear_and_load_emails_into_selection_bar(self.emails)
+                # Auto select the first email if available
+                if self.emails:
+                    self.show_email_details(0)
             else:
                 logger.warning(f"No emails loaded from {file_path}.")
                 self.statusBar().showMessage(f"No emails loaded.")
@@ -211,21 +212,33 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
             # Populate HTML tab
             if mail_message.html_body:
-                self.textEditHtml.setHtml(mail_message.html_body)
+                self.tabMailBody.setTabVisible(0, True)
+                self.webEngineViewHtml.setHtml(mail_message.html_body)
             else:
-                self.textEditHtml.setPlainText("HTML content not available.")
+                self.webEngineViewHtml.setHtml("")
+                self.tabMailBody.setTabVisible(0, False)
 
             # Populate Plain Text tab
             if mail_message.plain_body:
+                self.tabMailBody.setTabVisible(1, True)
                 self.textEditPlain.setPlainText(mail_message.plain_body)
             else:
-                self.textEditPlain.setPlainText("Plain text content not available.")
+                self.textEditPlain.setPlainText("")
+                self.tabMailBody.setTabVisible(1, False)
 
             # Populate Raw MIME tab
             if mail_message.raw_body:
+                self.tabMailBody.setTabVisible(2, True)
                 self.textEditRaw.setPlainText(mail_message.raw_body)
             else:
-                self.textEditRaw.setPlainText("Raw MIME content not available.")
+                self.textEditRaw.setPlainText("")
+                self.tabMailBody.setTabVisible(2, False)
+
+            # Always select the first available tab
+            for i in range(self.tabMailBody.count()):
+                if self.tabMailBody.isTabVisible(i):
+                    self.tabMailBody.setCurrentIndex(i)
+                    break
 
             end_time = time.perf_counter()
             duration = end_time - start_time
@@ -240,10 +253,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             logger.warning(
                 f"Attempted to show email details for invalid index: {index}"
             )
-            # Clear content if index is invalid
-            self.textEditHtml.setPlainText("")
+            # Clear content and ensure all tabs are visible if index is invalid
+            self.webEngineViewHtml.setHtml("")
             self.textEditPlain.setPlainText("")
             self.textEditRaw.setPlainText("")
+            self.tabMailBody.setTabVisible(0, True)  # HTML tab
+            self.tabMailBody.setTabVisible(1, True)  # Plain Text tab
+            self.tabMailBody.setTabVisible(2, True)  # Raw MIME tab
 
     def reload_data(self):
         logger.debug("Reload data action triggered")

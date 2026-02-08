@@ -34,6 +34,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QTextEdit,
 )
+from PySide6.QtWebEngineWidgets import QWebEngineView
 from constants import APP_NAME
 
 
@@ -250,11 +251,10 @@ class Ui_MainWindow(object):
         self.htmlBodyLayout = QVBoxLayout(self.tabHtml)
         self.htmlBodyLayout.setObjectName("htmlBodyLayout")
         self.htmlBodyLayout.setContentsMargins(0, 0, 0, 0)
-        self.textEditHtml = QTextEdit(self.tabHtml)
-        self.textEditHtml.setObjectName("textEditHtml")
-        self.textEditHtml.setReadOnly(True)
-        self.textEditHtml.setContentsMargins(0, 0, 0, 0)
-        self.htmlBodyLayout.addWidget(self.textEditHtml)
+        self.webEngineViewHtml = QWebEngineView(self.tabHtml)
+        self.webEngineViewHtml.setObjectName("webEngineViewHtml")
+        self.webEngineViewHtml.setContentsMargins(1, 1, 1, 1)
+        self.htmlBodyLayout.addWidget(self.webEngineViewHtml)
 
         # Setup Plain Text Tab
         self.tabPlainText = QWidget()
