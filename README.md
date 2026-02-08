@@ -52,6 +52,14 @@ If you used `python -m venv` instead of `py -3.12`, replace the `py -3.12 -m pip
 
 Run the application with `py ./src/app.py`
 
+### Updating the resources file
+
+After a new resources has been added to the [resources](./resources/) directory, you have to update the [resources.qrc](./resources.qrc) file to include the new entry of resource or remove the delete resource entry. Then re-compile the [resources_rc](./src/resources_rc.py) file with:
+
+```bash
+pyside6-rcc resources.qrc -o src/resources_rc.py
+```
+
 ## References
 
 - [RFC5322](https://datatracker.ietf.org/doc/html/rfc5322.html) - Defines how an email header should be

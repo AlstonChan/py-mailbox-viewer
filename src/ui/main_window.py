@@ -17,9 +17,7 @@ from PySide6.QtCore import (
     QSize,
     Qt,
 )
-from PySide6.QtGui import (
-    QAction,
-)
+from PySide6.QtGui import QAction, QIcon, QPixmap
 from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
@@ -57,14 +55,17 @@ class Ui_MainWindow(object):
         self.actionOpen = QAction(MainWindow)
         self.actionOpen.setObjectName("actionOpen")
         self.actionOpen.setText("Open")
+        self.actionOpen.setIcon(QIcon(":/icons/email_open.png"))
 
         self.actionReload = QAction(MainWindow)
         self.actionReload.setObjectName("actionReload")
         self.actionReload.setText("Reload")
+        self.actionReload.setIcon(QIcon(":/icons/arrow_refresh.png"))
 
         self.actionRecent_Files = QAction(MainWindow)
         self.actionRecent_Files.setObjectName("actionRecent_Files")
         self.actionRecent_Files.setText("Recent Files")
+        self.actionRecent_Files.setIcon(QIcon(":/icons/mail_yellow.png"))
 
         self.actionExit = QAction(MainWindow)
         self.actionExit.setObjectName("actionExit")
@@ -101,6 +102,7 @@ class Ui_MainWindow(object):
         self.actionZoom_in_out = QAction(MainWindow)
         self.actionZoom_in_out.setObjectName("actionZoom_in_out")
         self.actionZoom_in_out.setText("Zoom in / out")
+        self.actionZoom_in_out.setIcon(QIcon(":/icons/zoom.png"))
 
         self.actionShow_headers = QAction(MainWindow)
         self.actionShow_headers.setObjectName("actionShow_headers")

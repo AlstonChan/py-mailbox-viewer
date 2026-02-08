@@ -1,0 +1,9 @@
+<RCC version="1.0">
+    <qresource prefix="/icons">
+        <file alias="arrow_refresh.png">resources/arrow_refresh.png</file>
+        <file alias="email_open.png">resources/email_open.png</file>
+        <file alias="mail_yellow.png">resources/mail_yellow.png</file>
+        <file alias="zoom.png">resources/zoom.png</file>
+        <file alias="help.png">resources/help.png</file>
+    </qresource>
+</RCC>
