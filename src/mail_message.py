@@ -298,6 +298,14 @@ class MailMessage:
         return cleaned_email if cleaned_email else None
 
     @property
+    def formatted_message_id(self) -> Optional[str]:
+        """Returns the Message-ID with angle brackets removed, if present."""
+        if self.message_id:
+            # Remove leading '<' and trailing '>' if they exist
+            return self.message_id.strip('<>').strip()
+        return None
+
+    @property
     def mailed_by(self) -> Optional[str]:
         """
         Returns the SMTP server domain that handed the mail to the recipient server.

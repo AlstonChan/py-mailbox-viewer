@@ -17,6 +17,12 @@ from PySide6.QtWidgets import QApplication
 from main import MainWindow
 import resources_rc
 
+from PySide6.QtCore import QCoreApplication
+from constants import APP_NAME
+
+QCoreApplication.setOrganizationName("")
+QCoreApplication.setApplicationName(APP_NAME)
+
 
 def main():
     app = QApplication(sys.argv)

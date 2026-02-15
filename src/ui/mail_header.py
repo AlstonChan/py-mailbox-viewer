@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
 )
 from mail_message import MailMessage
 from utils import format_bytes
+from ui.common.ellipsis_label import EllipsisLabel
 
 
 class MailHeaderWidget(QWidget):
@@ -109,11 +110,10 @@ class MailHeaderWidget(QWidget):
             parent_layout.addWidget(label)
             self.labels[f"label{label_key}"] = label
 
-            value_label = QLabel(self)
+            value_label = EllipsisLabel("placeholder", self)
             value_label.setObjectName(f"label{label_key}Value")
             value_label.setSizePolicy(size_policy_expanding)
             value_label.setFont(font_label_bold if bold_value else font_label)
-            value_label.setText("placeholder")  # Placeholder text
             value_label.setTextInteractionFlags(selectable_label_flags)
             parent_layout.addWidget(value_label)
             self.labels[f"label{label_key}Value"] = value_label
@@ -224,7 +224,9 @@ class MailHeaderWidget(QWidget):
             else "N/A"
         )
         self.labels["labelMailedByValue"].setText(mail_message.mailed_by or "N/A")
-        self.labels["labelMessageIdValue"].setText(mail_message.message_id or "N/A")
+        self.labels["labelMessageIdValue"].setText(
+            mail_message.formatted_message_id or "N/A"
+        )
         self.labelDateTime.setText(
             mail_message.date_header.strftime("%Y/%m/%d %H:%M")
             if mail_message.date_header

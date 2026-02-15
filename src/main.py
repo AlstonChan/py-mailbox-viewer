@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
 )
 
+from recent_file_helper import RecentFileHelper
 from ui.main_window import Ui_MainWindow
 from ui.selection_bar import (
     SelectionBarWidget,
@@ -49,6 +50,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self._selection_bar_widgets: List[SelectionBarWidget] = []
 
         self.statusBar().showMessage("Ready")
+
+        recent_files = RecentFileHelper().get_recent_files()
+        self.set_recent_files(recent_files, self.open_file)
 
     def _clear_and_load_emails_into_selection_bar(
         self, emails: List[MailMessage]
@@ -83,7 +87,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.selectionBarLayout.addStretch(1)
 
     def _connect_actions(self) -> None:
-        self.actionOpen.triggered.connect(self.open_file)
+        self.actionOpen.triggered.connect(self.open_file_dialog)
         self.actionReload.triggered.connect(self.reload_data)
         self.actionExit.triggered.connect(self.close)
         self.actionSearch.triggered.connect(self.search_data)
@@ -98,17 +102,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.actionWrap_text.triggered.connect(self.wrap_text)
 
     # ---------------- Logic ----------------
-    def open_file(self) -> None:
-        file_dialog: QFileDialog = QFileDialog(self)
-        file_dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
-        file_dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
-
-        file_path, _ = file_dialog.getOpenFileName(
-            self,
-            "Open Mailbox File",
-            "",
-            "All Files (*);;Mailbox Files (*.mbox *.msf *.eml)",
-        )
+    def open_file(self, file_path) -> None:
         if file_path:
             logger.debug(f"Opening file: {file_path}")
             self.emails = self.load_emails(file_path)
@@ -119,9 +113,26 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 # Auto select the first email if available
                 if self.emails:
                     self.show_email_details(0)
+                    RecentFileHelper().add_recent_file(file_path)
+                    self.set_recent_files(
+                        RecentFileHelper().get_recent_files(), self.open_file
+                    )
             else:
                 logger.warning(f"No emails loaded from {file_path}.")
                 self.statusBar().showMessage(f"No emails loaded.")
+
+    def open_file_dialog(self) -> Optional[str]:
+        file_dialog: QFileDialog = QFileDialog(self)
+        file_dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
+        file_dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
+
+        file_path, _ = file_dialog.getOpenFileName(
+            self,
+            "Open Mailbox File",
+            "",
+            "All Files (*);;Mailbox Files (*.mbox *.msf *.eml)",
+        )
+        return self.open_file(file_path) if file_path else None
 
     def load_emails(self, file_path: str) -> List[MailMessage]:
         emails: List[MailMessage] = []

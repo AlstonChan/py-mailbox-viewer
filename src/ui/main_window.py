@@ -12,12 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+from typing import Callable
 from PySide6.QtCore import (
     QRect,
     QSize,
     Qt,
 )
-from PySide6.QtGui import QAction, QIcon
+from PySide6.QtGui import QAction, QIcon, QKeySequence
 from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
@@ -35,6 +37,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from constants import APP_NAME
 from ui.mail_header import MailHeaderWidget
+from logger_config import logger
 
 
 class Ui_MainWindow(object):
@@ -57,15 +60,16 @@ class Ui_MainWindow(object):
         self.actionOpen.setObjectName("actionOpen")
         self.actionOpen.setText("Open")
         self.actionOpen.setIcon(QIcon(":/icons/email_open.png"))
+        self.actionOpen.setShortcut(QKeySequence("Ctrl+O"))
 
         self.actionReload = QAction(MainWindow)
         self.actionReload.setObjectName("actionReload")
         self.actionReload.setText("Reload")
         self.actionReload.setIcon(QIcon(":/icons/arrow_refresh.png"))
 
-        self.actionRecent_Files = QAction(MainWindow)
+        self.actionRecent_Files = QMenu(MainWindow)
         self.actionRecent_Files.setObjectName("actionRecent_Files")
-        self.actionRecent_Files.setText("Recent Files")
+        self.actionRecent_Files.setTitle("Recent Files")
         self.actionRecent_Files.setIcon(QIcon(":/icons/mail_yellow.png"))
 
         self.actionExit = QAction(MainWindow)
@@ -323,7 +327,7 @@ class Ui_MainWindow(object):
 
         self.menuFile.addAction(self.actionOpen)
         self.menuFile.addAction(self.actionReload)
-        self.menuFile.addAction(self.actionRecent_Files)
+        self.menuFile.addAction(self.actionRecent_Files.menuAction())
         self.menuFile.addAction(self.actionExit)
 
         self.menuTool.addAction(self.actionSearch)
@@ -343,3 +347,36 @@ class Ui_MainWindow(object):
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName("statusbar")
         MainWindow.setStatusBar(self.statusbar)
+
+    def set_recent_files(
+        self, recent_files: list[str], open_recent_file_callback: Callable[[str], None]
+    ):
+        logger.debug(f"Setting recent files menu with: {recent_files}")
+        if (self.actionRecent_Files is None) or (
+            not isinstance(self.actionRecent_Files, QMenu)
+        ):
+            return  # Safety check to ensure the menu exists before trying to modify it
+
+        self.actionRecent_Files.clear()  # Clear existing actions
+        if not recent_files or not open_recent_file_callback:
+            logger.debug(
+                "No recent files or callback provided, adding disabled 'No recent files' action"
+            )
+            no_recent_action = QAction(self.actionRecent_Files)
+            no_recent_action.setText("No recent files")
+            no_recent_action.setEnabled(False)
+            self.actionRecent_Files.addAction(no_recent_action)
+        else:
+            for i, file_path in enumerate(recent_files):
+                # Display only the filename if path is too long, otherwise full path
+                display_text = f"&{i + 1}. {os.path.basename(file_path)}"
+                action = QAction(self.actionRecent_Files)
+                action.setText(display_text)
+                action.setStatusTip(file_path)  # Show full path in status bar
+                action.setShortcut(
+                    QKeySequence(f"Ctrl+{i + 1}")
+                )  # Add shortcut for quick access
+                action.triggered.connect(
+                    lambda checked, path=file_path: open_recent_file_callback(path)
+                )
+                self.actionRecent_Files.addAction(action)
