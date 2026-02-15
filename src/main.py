@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import defaultdict
 import mailbox
 import email.utils
 from typing import List, Optional
@@ -134,7 +135,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 key,
                 message,
             ) in mbox.items():  # message is not used, so I can pass mbox and key
-                headers = {k: v for k, v in message.items()}
+                headers = defaultdict(list)
+                for k, v in message.items():
+                    headers[k].append(str(v))
+                headers = dict(headers)
+
                 size = len(message.as_bytes())
 
                 subject = message.get("Subject")
@@ -239,6 +244,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 if self.tabMailBody.isTabVisible(i):
                     self.tabMailBody.setCurrentIndex(i)
                     break
+
+            self.mailHeader.set_email_data(mail_message)
 
             end_time = time.perf_counter()
             duration = end_time - start_time

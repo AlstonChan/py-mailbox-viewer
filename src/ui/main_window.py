@@ -17,7 +17,7 @@ from PySide6.QtCore import (
     QSize,
     Qt,
 )
-from PySide6.QtGui import QAction, QIcon, QPixmap
+from PySide6.QtGui import QAction, QIcon
 from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
@@ -34,6 +34,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from constants import APP_NAME
+from ui.mail_header import MailHeaderWidget
 
 
 class Ui_MainWindow(object):
@@ -230,6 +231,11 @@ class Ui_MainWindow(object):
         self.frameMailHeader.setFrameShape(QFrame.Shape.StyledPanel)
         self.frameMailHeader.setFrameShadow(QFrame.Shadow.Plain)
         self.splitterEmail.addWidget(self.frameMailHeader)
+
+        self.mailHeaderLayout = QVBoxLayout(self.frameMailHeader)
+        self.mailHeaderLayout.setObjectName("mailHeaderLayout")
+        self.mailHeader = MailHeaderWidget()
+        self.mailHeaderLayout.addWidget(self.mailHeader)
 
         # Setup Mail Body Tabs
         self.tabMailBody = QTabWidget(self.splitterEmail)

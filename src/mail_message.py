@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Dict, Any, List, Optional, Tuple
+from typing import Callable, Any, List, Mapping, Optional, Tuple
 from datetime import datetime
 from logger_config import logger
+import re
+import email.utils
 
 
 class MailMessage:
@@ -28,7 +30,7 @@ class MailMessage:
 
     def __init__(
         self,
-        headers: Dict[str, str],
+        headers: Mapping[str, List[str]],
         size: int,
         _body_content_provider: Callable[
             [], Tuple[Optional[str], Optional[str], Optional[str]]
@@ -145,30 +147,188 @@ class MailMessage:
         )  # Return empty string if plain body is None
 
     # --- Convenience properties for direct access to common raw headers ---
+    def get_header(self, name: str) -> Optional[str]:
+        values = self.headers.get(name)
+        return values[0] if values else None
+
+    def get_all_headers(self, name: str) -> List[str]:
+        return self.headers.get(name, [])
+
     @property
     def date(self) -> Optional[str]:
         """Returns the raw 'Date' header value."""
-        return self.headers.get("Date")
+        return self.get_header("Date")
 
     @property
     def from_(self) -> Optional[str]:
         """Returns the raw 'From' header value."""
-        return self.headers.get("From")
+        return self.get_header("From")
 
     @property
     def to(self) -> Optional[str]:
         """Returns the raw 'To' header value."""
-        return self.headers.get("To")
+        return self.get_header("To")
 
     @property
     def cc(self) -> Optional[str]:
         """Returns the raw 'Cc' header value."""
-        return self.headers.get("Cc")
+        return self.get_header("Cc")
 
     @property
     def bcc(self) -> Optional[str]:
         """Returns the raw 'Bcc' header value (less common in received mail)."""
-        return self.headers.get("Bcc")
+        return self.get_header("Bcc")
+
+    @property
+    def reply_to(self) -> Optional[str]:
+        """Returns the raw 'Reply-To' header value."""
+        return self.get_header("Reply-To")
+
+    @property
+    def formatted_to_full(self) -> List[str]:
+        """Returns a list of fully formatted 'To' email addresses (e.g., "Name <email>")."""
+        return self._format_address_list(self.to, format_type="full")
+
+    @property
+    def formatted_to_names(self) -> List[str]:
+        """Returns a list of 'To' email display names."""
+        return self._format_address_list(self.to, format_type="name")
+
+    @property
+    def formatted_to_emails(self) -> List[str]:
+        """Returns a list of 'To' email addresses (email part only)."""
+        return self._format_address_list(self.to, format_type="email")
+
+    @property
+    def formatted_cc_full(self) -> List[str]:
+        """Returns a list of fully formatted 'Cc' email addresses (e.g., "Name <email>")."""
+        return self._format_address_list(self.cc, format_type="full")
+
+    @property
+    def formatted_cc_names(self) -> List[str]:
+        """Returns a list of 'Cc' email display names."""
+        return self._format_address_list(self.cc, format_type="name")
+
+    @property
+    def formatted_cc_emails(self) -> List[str]:
+        """Returns a list of 'Cc' email addresses (email part only)."""
+        return self._format_address_list(self.cc, format_type="email")
+
+    @property
+    def formatted_bcc_full(self) -> List[str]:
+        """Returns a list of fully formatted 'Bcc' email addresses (e.g., "Name <email>")."""
+        return self._format_address_list(self.bcc, format_type="full")
+
+    @property
+    def formatted_bcc_names(self) -> List[str]:
+        """Returns a list of 'Bcc' email display names."""
+        return self._format_address_list(self.bcc, format_type="name")
+
+    @property
+    def formatted_bcc_emails(self) -> List[str]:
+        """Returns a list of 'Bcc' email addresses (email part only)."""
+        return self._format_address_list(self.bcc, format_type="email")
+
+    def _format_address_list(
+        self, raw_addresses_string: Optional[str], format_type: str
+    ) -> List[str]:
+        """
+        Helper method to parse and format a list of addresses from a raw header string.
+        format_type can be 'full', 'name', or 'email'.
+        """
+        if not raw_addresses_string:
+            return []
+
+        formatted_list: List[str] = []
+        for name, email_address in email.utils.getaddresses([raw_addresses_string]):
+            cleaned_name = self._clean_name_part(name)
+            cleaned_email = self._clean_email_part(email_address)
+
+            if format_type == "full":
+                if cleaned_name and cleaned_email:
+                    formatted_list.append(f"{cleaned_name} <{cleaned_email}>")
+                elif cleaned_email:
+                    formatted_list.append(cleaned_email)
+                elif cleaned_name:
+                    formatted_list.append(cleaned_name)
+            elif format_type == "name":
+                if cleaned_name:
+                    formatted_list.append(cleaned_name)
+            elif format_type == "email":
+                if cleaned_email:
+                    formatted_list.append(cleaned_email)
+        return formatted_list
+
+    @property
+    def formatted_from_full_address(self) -> Optional[str]:
+        """Returns the fully formatted 'From' email address (e.g., "Name <email>")."""
+        raw_from = self.from_
+        if not raw_from:
+            return None
+        name, email_address = self._parse_address_components(raw_from)
+        cleaned_name = self._clean_name_part(name)
+        cleaned_email = self._clean_email_part(email_address)
+
+        if cleaned_name and cleaned_email:
+            return f"{cleaned_name} <{cleaned_email}>"
+        elif cleaned_email:
+            return cleaned_email
+        elif cleaned_name:
+            return cleaned_name
+        return None
+
+    @property
+    def formatted_from_name(self) -> Optional[str]:
+        """Returns the 'From' email display name."""
+        raw_from = self.from_
+        if not raw_from:
+            return None
+        name, _ = self._parse_address_components(raw_from)
+        cleaned_name = self._clean_name_part(name)
+        return cleaned_name if cleaned_name else None
+
+    @property
+    def formatted_from_email(self) -> Optional[str]:
+        """Returns the 'From' email address (email part only)."""
+        raw_from = self.from_
+        if not raw_from:
+            return None
+        _, email_address = self._parse_address_components(raw_from)
+        cleaned_email = self._clean_email_part(email_address)
+        return cleaned_email if cleaned_email else None
+
+    @property
+    def mailed_by(self) -> Optional[str]:
+        """
+        Returns the SMTP server domain that handed the mail to the recipient server.
+        Derived from Received, Return-Path, or From headers.
+        """
+
+        # 1. Try Received headers
+        received_headers = self.get_all_headers("Received")
+        if received_headers:
+            # First Received header = closest server to recipient
+            first = received_headers[0]
+
+            # Extract "from <server>"
+            match = re.search(r"from\s+([^\s\(\);]+)", first, re.IGNORECASE)
+            if match:
+                return match.group(1)
+
+        # 2. Fallback to Return-Path
+        return_path = self.get_header("Return-Path")
+        if return_path:
+            match = re.search(r"@([^>\s]+)", return_path)
+            if match:
+                return match.group(1)
+
+        # 3. Fallback to From domain
+        if self.from_:
+            match = re.search(r"@([^>\s]+)", self.from_)
+            if match:
+                return match.group(1)
+
+        return None
 
     @property
     def received_raw(self) -> Optional[str]:
@@ -180,7 +340,7 @@ class MailMessage:
         More sophisticated parsing would be needed to access all 'Received'
         headers if multiple exist.
         """
-        return self.headers.get("Received")
+        return self.get_header("Received")
 
     def __repr__(self) -> str:
         """
@@ -192,3 +352,24 @@ class MailMessage:
             f"Date='{self.date_header.isoformat() if self.date_header else self.date or 'N/A'}', "
             f"Size={self.size})"
         )
+
+    @staticmethod
+    def _parse_address_components(address_string: str) -> Tuple[str, str]:
+        """
+        Parses a single email address string into its name and email parts.
+        Uses email.utils.parseaddr for robust parsing.
+        Returns a tuple of (name, email).
+        """
+        if not address_string:
+            return "", ""
+        return email.utils.parseaddr(address_string)
+
+    @staticmethod
+    def _clean_name_part(name: str) -> str:
+        """Removes quotes from a name string and strips whitespace."""
+        return name.strip().strip('"')
+
+    @staticmethod
+    def _clean_email_part(email_address: str) -> str:
+        """Removes angle brackets from an email address string and strips whitespace."""
+        return email_address.strip()
