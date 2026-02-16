@@ -20,7 +20,7 @@ import resources_rc
 from PySide6.QtCore import QCoreApplication
 from constants import APP_NAME
 
-QCoreApplication.setOrganizationName("")
+QCoreApplication.setOrganizationName(APP_NAME)
 QCoreApplication.setApplicationName(APP_NAME)
 
 
