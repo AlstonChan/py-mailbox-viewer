@@ -103,6 +103,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     # ---------------- Logic ----------------
     def open_file(self, file_path) -> None:
+        self.loaded_file_path = file_path  # Save the file path for potential reload
         if file_path:
             logger.debug(f"Opening file: {file_path}")
             self.emails = self.load_emails(file_path)
@@ -281,6 +282,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def reload_data(self):
         logger.debug("Reload data action triggered")
+        if hasattr(self, "loaded_file_path") and self.loaded_file_path:
+            logger.info(f"Reloading data from: {self.loaded_file_path}")
+            self.open_file(self.loaded_file_path)
+        else:
+            logger.warning("No file path to reload. Open a file first.")
+            QMessageBox.warning(self, "Warning", "No file loaded to reload from.")
 
     def search_data(self):
         logger.debug("Search data action triggered")

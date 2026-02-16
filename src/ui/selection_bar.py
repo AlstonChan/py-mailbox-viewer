@@ -28,6 +28,7 @@ from PySide6.QtWidgets import (
 from mail_message import MailMessage
 from utils import format_bytes
 from ui.common.ellipsis_label import EllipsisLabel
+from logger_config import logger
 
 
 class SelectionBarWidget(QWidget):
@@ -42,10 +43,10 @@ class SelectionBarWidget(QWidget):
         super().__init__(parent)
         self.index = index
         self._is_hovered = False  # Internal state for hover effect
-        self._is_active = False # Internal state for active/selected email
+        self._is_active = False  # Internal state for active/selected email
 
         self._setup_ui()
-        self._apply_default_style() # Apply default style initially
+        self._apply_default_style()  # Apply default style initially
 
     def _setup_ui(self):
         if not self.objectName():
@@ -258,21 +259,22 @@ class SelectionBarWidget(QWidget):
     def enterEvent(self, event):
         """Event handler for mouse entering the widget area."""
         self._is_hovered = True
-        if not self._is_active: # Only apply hover if not active
+        if not self._is_active:  # Only apply hover if not active
             self._apply_hover_style()
         super().enterEvent(event)
 
     def leaveEvent(self, event):
         """Event handler for mouse leaving the widget area."""
         self._is_hovered = False
-        if not self._is_active: # Only apply default if not active
+        if not self._is_active:  # Only apply default if not active
             self._apply_default_style()
         super().leaveEvent(event)
 
     def mousePressEvent(self, event):
         """Event handler for mouse press."""
         if event.button() == Qt.MouseButton.LeftButton:
-            self.clicked.emit(self.index)
+            logger.debug(f"Selection bar clicked: Index {self.index}")
+        self.clicked.emit(self.index)
         super().mousePressEvent(event)
 
     def set_email_data(self, mail_message: MailMessage) -> None:

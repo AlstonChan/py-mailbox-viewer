@@ -46,7 +46,7 @@ class MailHeaderWidget(QWidget):
         # Main layout
         self.gridLayout = QGridLayout(self)
         self.gridLayout.setObjectName("gridLayout")
-        self.gridLayout.setContentsMargins(0, 0, 0, 0)
+        self.gridLayout.setContentsMargins(4, 4, 4, 4)
 
         # Central grid layout for left and right sections
         self.gridLayoutMain = QGridLayout()
@@ -90,6 +90,12 @@ class MailHeaderWidget(QWidget):
         size_policy_expanding = QSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
         )
+        size_policy_expanding.setHorizontalStretch(1)
+
+        # Size policy for labels that should shrink
+        size_policy_label = QSizePolicy(
+            QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred
+        )
 
         # Helper to create a label and add it to a horizontal layout
         def create_label_row(
@@ -100,23 +106,32 @@ class MailHeaderWidget(QWidget):
         ):
             label = QLabel(self)
             label.setObjectName(f"label{label_key}")
-            label.setSizePolicy(size_policy_preferred)
+            label.setSizePolicy(size_policy_label)  # Changed to Maximum policy
             label.setFont(font_label)
             label.setText(label_text)
             label.setAutoFillBackground(False)
-            label.setWordWrap(True)
+            label.setWordWrap(False)
             label.setMargin(0)
             label.setTextInteractionFlags(selectable_label_flags)
+            label.setAlignment(
+                Qt.AlignmentFlag.AlignLeading | Qt.AlignmentFlag.AlignTop
+            )
             parent_layout.addWidget(label)
             self.labels[f"label{label_key}"] = label
 
-            value_label = EllipsisLabel("placeholder", self)
+            value_label = QLabel("placeholder", self)
             value_label.setObjectName(f"label{label_key}Value")
             value_label.setSizePolicy(size_policy_expanding)
             value_label.setFont(font_label_bold if bold_value else font_label)
             value_label.setTextInteractionFlags(selectable_label_flags)
+            value_label.setWordWrap(True)
+            value_label.setMinimumWidth(0)
+            value_label.setMaximumWidth(16777215)
             parent_layout.addWidget(value_label)
             self.labels[f"label{label_key}Value"] = value_label
+
+            # Set stretch factor so value label takes available space
+            parent_layout.setStretch(parent_layout.count() - 1, 1)
 
         # From
         self.horizontalLayoutFrom = QHBoxLayout()
@@ -167,7 +182,7 @@ class MailHeaderWidget(QWidget):
         self.verticalLayoutLeft.addLayout(self.horizontalLayoutMessageId)
 
         self.verticalSpacerContent = QSpacerItem(
-            20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding
+            20, 2, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding
         )
         self.verticalLayoutLeft.addItem(self.verticalSpacerContent)
 
@@ -198,7 +213,7 @@ class MailHeaderWidget(QWidget):
         self.gridLayoutRight.addWidget(self.labelMailSize, 1, 0, 1, 1)
 
         self.verticalSpacerSide = QSpacerItem(
-            20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding
+            20, 2, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding
         )
         self.gridLayoutRight.addItem(self.verticalSpacerSide, 2, 0, 1, 1)
 
@@ -206,26 +221,38 @@ class MailHeaderWidget(QWidget):
         """
         Populates the mail header labels with data from a MailMessage object.
         """
-        self.labels["labelFromValue"].setText(mail_message.sender or "N/A")
-        self.labels["labelReplyToValue"].setText(mail_message.reply_to or "N/A")
+        self.labels["labelFromValue"].setText(
+            EllipsisLabel.force_wrap(mail_message.sender or "N/A")
+        )
+        self.labels["labelReplyToValue"].setText(
+            EllipsisLabel.force_wrap(mail_message.reply_to or "N/A")
+        )
         self.labels["labelToValue"].setText(
-            ", ".join(mail_message.formatted_to_full)
-            if mail_message.formatted_to_full
-            else "N/A"
+            EllipsisLabel.force_wrap(
+                ", ".join(mail_message.formatted_to_full)
+                if mail_message.formatted_to_full
+                else "N/A"
+            )
         )
         self.labels["labelCcValue"].setText(
-            ", ".join(mail_message.formatted_cc_full)
-            if mail_message.formatted_cc_full
-            else "N/A"
+            EllipsisLabel.force_wrap(
+                ", ".join(mail_message.formatted_cc_full)
+                if mail_message.formatted_cc_full
+                else "N/A"
+            )
         )
         self.labels["labelBccValue"].setText(
-            ", ".join(mail_message.formatted_bcc_full)
-            if mail_message.formatted_bcc_full
-            else "N/A"
+            EllipsisLabel.force_wrap(
+                ", ".join(mail_message.formatted_bcc_full)
+                if mail_message.formatted_bcc_full
+                else "N/A"
+            )
         )
-        self.labels["labelMailedByValue"].setText(mail_message.mailed_by or "N/A")
+        self.labels["labelMailedByValue"].setText(
+            EllipsisLabel.force_wrap(mail_message.mailed_by or "N/A")
+        )
         self.labels["labelMessageIdValue"].setText(
-            mail_message.formatted_message_id or "N/A"
+            EllipsisLabel.force_wrap(mail_message.formatted_message_id or "N/A")
         )
         self.labelDateTime.setText(
             mail_message.date_header.strftime("%Y/%m/%d %H:%M")

@@ -32,6 +32,10 @@ class EllipsisLabel(QLabel):
         super().resizeEvent(event)
         self._update_elide()
 
+    @staticmethod
+    def force_wrap(text):
+        return "\u200b".join(text)
+
     def _update_elide(self):
         if not self._text:
             super().setText("")

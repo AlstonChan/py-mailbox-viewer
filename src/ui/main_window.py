@@ -238,8 +238,28 @@ class Ui_MainWindow(object):
 
         self.mailHeaderLayout = QVBoxLayout(self.frameMailHeader)
         self.mailHeaderLayout.setObjectName("mailHeaderLayout")
+        self.mailHeaderLayout.setContentsMargins(2, 2, 2, 2)
+        self.mailHeaderScrollArea = QScrollArea(self.frameMailHeader)
+        self.mailHeaderScrollArea.setWidgetResizable(True)
+        self.mailHeaderScrollArea.setVerticalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAsNeeded
+        )
+        self.mailHeaderScrollArea.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+        self.mailHeaderScrollArea.setFrameShape(
+            QFrame.Shape.NoFrame
+        )  # Remove frame border
+        self.mailHeaderScrollArea.setStyleSheet(
+            "QScrollArea { background-color: palette(base); border: none; }"
+        )  # Set background to base color
+
         self.mailHeader = MailHeaderWidget()
-        self.mailHeaderLayout.addWidget(self.mailHeader)
+        self.mailHeader.setStyleSheet(
+            "MailHeaderWidget { background-color: palette(base); }"
+        )
+        self.mailHeaderScrollArea.setWidget(self.mailHeader)
+        self.mailHeaderLayout.addWidget(self.mailHeaderScrollArea)
 
         # Setup Mail Body Tabs
         self.tabMailBody = QTabWidget(self.splitterEmail)
