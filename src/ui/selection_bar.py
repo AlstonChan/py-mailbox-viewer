@@ -45,8 +45,89 @@ class SelectionBarWidget(QWidget):
         self._is_hovered = False  # Internal state for hover effect
         self._is_active = False  # Internal state for active/selected email
 
+        # Track click gesture to avoid emitting on drags / text selection
+        self._press_pos = None
+        self._pressed = False
+
         self._setup_ui()
         self._apply_default_style()  # Apply default style initially
+
+    # --- Click handling ---
+    def _install_click_forwarding(self) -> None:
+        """Install an event filter on child widgets that commonly consume mouse events."""
+        # frameMain covers most of the area; labels may accept events (e.g., selectable text)
+        for w in [
+            getattr(self, "frameMain", None),
+            getattr(self, "labelRecipient", None),
+            getattr(self, "labelSubject", None),
+            getattr(self, "labelDateTime", None),
+            getattr(self, "labelSize", None),
+        ]:
+            if w is not None:
+                w.installEventFilter(self)
+
+    def eventFilter(self, watched, event):
+        et = event.type()
+        # Observe mouse events from children but do NOT consume them.
+        # This allows selectable labels to receive press/move/release for text selection
+        # while we still detect click gestures by tracking press/move/release positions.
+        if et in (
+            event.Type.MouseButtonPress,
+            event.Type.MouseMove,
+            event.Type.MouseButtonRelease,
+        ):
+            try:
+                if et == event.Type.MouseButtonPress:
+                    if event.button() == Qt.MouseButton.LeftButton:
+                        # Map child-local coordinates to parent (self) coordinates
+                        pos = watched.mapTo(self, event.position().toPoint())
+                        self._pressed = True
+                        self._press_pos = pos
+                elif et == event.Type.MouseMove:
+                    if self._pressed and self._press_pos is not None:
+                        pos = watched.mapTo(self, event.position().toPoint())
+                        if (pos - self._press_pos).manhattanLength() >= 4:
+                            # User moved enough to constitute a drag/selection
+                            self._pressed = False
+                elif et == event.Type.MouseButtonRelease:
+                    if event.button() == Qt.MouseButton.LeftButton and self._pressed:
+                        pos = watched.mapTo(self, event.position().toPoint())
+                        if self.rect().contains(pos):
+                            logger.debug(f"Selection bar clicked: Index {self.index}")
+                            self.clicked.emit(self.index)
+                    # Reset press state regardless
+                    self._pressed = False
+                    self._press_pos = None
+            except Exception:
+                # Be defensive: don't let unexpected event shapes break selection
+                self._pressed = False
+                self._press_pos = None
+            # Do not consume the event here; allow child widget to handle selection
+            return False
+        return super().eventFilter(watched, event)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._pressed = True
+            self._press_pos = event.position().toPoint()
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        # If user is selecting text or dragging, don't treat it as a click.
+        if self._pressed and self._press_pos is not None:
+            if (event.position().toPoint() - self._press_pos).manhattanLength() >= 4:
+                self._pressed = False
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton and self._pressed:
+            # Only emit if release happens inside the widget
+            if self.rect().contains(event.position().toPoint()):
+                logger.debug(f"Selection bar clicked: Index {self.index}")
+                self.clicked.emit(self.index)
+        self._pressed = False
+        self._press_pos = None
+        super().mouseReleaseEvent(event)
 
     def _setup_ui(self):
         if not self.objectName():
@@ -55,6 +136,7 @@ class SelectionBarWidget(QWidget):
         self._setup_base_widget_properties()
         self._setup_main_frame_and_layouts()
         self._setup_labels()
+        self._install_click_forwarding()
 
     def _setup_base_widget_properties(self):
         self.setWindowModality(Qt.WindowModality.NonModal)
@@ -140,6 +222,9 @@ class SelectionBarWidget(QWidget):
         self.labelRecipient.setAutoFillBackground(False)
         self.labelRecipient.setMargin(0)
         self.labelRecipient.setText("Name <email>")
+        self.labelRecipient.setTextInteractionFlags(
+            Qt.TextInteractionFlag.NoTextInteraction
+        )
         self.hBoxLayoutTop.addWidget(self.labelRecipient)
 
         # Label DateTime
@@ -182,8 +267,9 @@ class SelectionBarWidget(QWidget):
         self.labelSubject.setAlignment(
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
         )
+        # Do not allow text selection on subject label either
         self.labelSubject.setTextInteractionFlags(
-            Qt.TextInteractionFlag.TextSelectableByMouse
+            Qt.TextInteractionFlag.NoTextInteraction
         )
         self.labelSubject.setStyleSheet("padding-right: 6px;")
 
@@ -269,13 +355,6 @@ class SelectionBarWidget(QWidget):
         if not self._is_active:  # Only apply default if not active
             self._apply_default_style()
         super().leaveEvent(event)
-
-    def mousePressEvent(self, event):
-        """Event handler for mouse press."""
-        if event.button() == Qt.MouseButton.LeftButton:
-            logger.debug(f"Selection bar clicked: Index {self.index}")
-        self.clicked.emit(self.index)
-        super().mousePressEvent(event)
 
     def set_email_data(self, mail_message: MailMessage) -> None:
         """

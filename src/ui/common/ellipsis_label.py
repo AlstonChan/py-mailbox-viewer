@@ -23,6 +23,9 @@ class EllipsisLabel(QLabel):
         self._text = text
         super().setText(text)
         self.setMinimumWidth(1)
+        # Allow the label to receive focus and participate in mouse selection
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        # Ensure text can be selected by mouse/keyboard when flags are set externally
 
     def setText(self, text: str):
         self._text = text
@@ -51,3 +54,15 @@ class EllipsisLabel(QLabel):
         )
 
         super().setText(elided)
+
+    # Ensure mouse events reach QLabel implementation so text selection works
+    def mousePressEvent(self, event):
+        # Let QLabel handle selection start; ensure the widget gets focus
+        self.setFocus()
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        super().mouseReleaseEvent(event)
