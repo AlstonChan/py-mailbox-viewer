@@ -56,7 +56,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.statusBar().showMessage("Ready")
 
-        recent_files = RecentFileHelper().get_recent_files()
+        recent_files = RecentFileHelper.get_recent_files()
         self.set_recent_files(recent_files, self.open_file)
 
         # Setup keyboard shortcuts for selection navigation
@@ -164,9 +164,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 # Auto select the first email if available
                 if self.emails:
                     self.show_email_details(0)
-                    RecentFileHelper().add_recent_file(file_path)
+                    RecentFileHelper.add_recent_file(file_path)
                     self.set_recent_files(
-                        RecentFileHelper().get_recent_files(), self.open_file
+                        RecentFileHelper.get_recent_files(), self.open_file
                     )
             else:
                 logger.warning(f"No emails loaded from {file_path}.")
