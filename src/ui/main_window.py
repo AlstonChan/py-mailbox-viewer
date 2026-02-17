@@ -13,11 +13,14 @@
 # limitations under the License.
 
 import os
-from typing import Callable
+from typing import Callable, Sequence
 from PySide6.QtCore import (
     QRect,
     QSize,
     Qt,
+    QPoint,
+    QPropertyAnimation,
+    QEasingCurve,
 )
 from PySide6.QtGui import QAction, QIcon, QKeySequence
 from PySide6.QtWidgets import (
@@ -400,3 +403,128 @@ class Ui_MainWindow(object):
                     lambda checked, path=file_path: open_recent_file_callback(path)
                 )
                 self.actionRecent_Files.addAction(action)
+
+    def ensure_selection_bar_visible(
+        self, selection_bar_widgets: Sequence[QWidget], widget: QWidget, delta: int = 0
+    ) -> None:
+        """Scroll the left scroll area so the provided widget is visible.
+
+        Behavior:
+        - If navigating down (delta>0) and the newly selected widget is in the
+          last two visible items, scroll down so one item remains visible below it.
+        - If navigating up (delta<0) and the newly selected widget is in the
+          first two visible items, scroll up so one item remains visible above it.
+        - Otherwise, don't change the scroll (avoid unnecessary jumps).
+
+        Scrolling is animated over ~100ms for smoother UX.
+
+        Args:
+            selection_bar_widgets: Sequence of all selection bar widgets
+            widget: The widget to make visible
+            delta: Direction of navigation (-1 for up, +1 for down, 0 for no navigation)
+        """
+        if not hasattr(self, "scrollAreaLeft") or widget is None:
+            return
+        try:
+            scroll_widget = self.scrollAreaLeft.widget()
+            if scroll_widget is None:
+                return
+
+            viewport = self.scrollAreaLeft.viewport()
+            vbar = self.scrollAreaLeft.verticalScrollBar()
+            vp_h = viewport.height()
+
+            # Content coordinates for viewport visible range
+            visible_top = vbar.value()
+            visible_bottom = visible_top + vp_h
+
+            # Compute positions of all selection widgets to determine visible index range
+            tops = []
+            for w in selection_bar_widgets:
+                pos = w.mapTo(scroll_widget, QPoint(0, 0)).y()
+                tops.append((w, pos, pos + w.height()))
+
+            # Find first and last visible indices
+            first_visible = None
+            last_visible = None
+            for idx, (_, top, bottom) in enumerate(tops):
+                if bottom > visible_top and top < visible_bottom:
+                    if first_visible is None:
+                        first_visible = idx
+                    last_visible = idx
+
+            # If nothing visible, just return
+            if first_visible is None or last_visible is None:
+                return
+
+            # Find index of the widget to show
+            try:
+                idx = selection_bar_widgets.index(widget)
+            except ValueError:
+                return
+
+            do_scroll = False
+            desired_v = visible_top
+
+            # If moving down and widget is among the last two visible, scroll down
+            if delta > 0 and idx >= (last_visible - 1):
+                # Aim to position widget so one item remains visible below it
+                # This means scrolling to make the widget appear second-from-bottom
+                if idx < len(tops) - 1:
+                    # Scroll so that widget is at position where next widget is partially visible
+                    widget_top = tops[idx][1]
+                    widget_bottom = tops[idx][2]
+                    next_top = tops[idx + 1][1]
+                    # Desired scroll: widget bottom is near viewport bottom, leaving space for one more
+                    desired_v = widget_top - (
+                        vp_h
+                        - (tops[idx][2] - tops[idx][1])
+                        - (tops[idx + 1][2] - tops[idx + 1][1])
+                    )
+                else:
+                    # At last item, just scroll so it's fully visible at bottom
+                    widget_top = tops[idx][1]
+                    desired_v = widget_top - vp_h + (tops[idx][2] - tops[idx][1])
+                do_scroll = True
+
+            # If moving up and widget is among the first two visible, scroll up
+            elif delta < 0 and idx <= (first_visible + 1):
+                # Aim to position widget so one item is visible above it
+                # This means making the widget appear second-from-top
+                if idx > 0:
+                    prev_top = tops[idx - 1][1]
+                    # Scroll so previous widget is visible at top
+                    desired_v = prev_top
+                else:
+                    # At first item, just scroll to top
+                    desired_v = 0
+                do_scroll = True
+
+            # Clamp desired_v into scrollbar range
+            desired_v = max(vbar.minimum(), min(vbar.maximum(), int(desired_v)))
+
+            if do_scroll:
+                # Animate scrollbar value for smooth UX, faster for up (200ms), slower for down (300ms)
+                try:
+                    duration = 200 if delta < 0 else 300
+                    anim = QPropertyAnimation(vbar, b"value", self.scrollAreaLeft)
+                    anim.setDuration(duration)
+                    anim.setStartValue(vbar.value())
+                    anim.setEndValue(desired_v)
+                    anim.setEasingCurve(QEasingCurve.Type.OutCubic)
+                    anim.start()
+                    # Keep a reference to prevent garbage collection
+                    if not hasattr(self, "_scroll_animations"):
+                        self._scroll_animations = []
+                    self._scroll_animations.append(anim)
+                    # Clean up old animations
+                    self._scroll_animations = [
+                        a
+                        for a in self._scroll_animations
+                        if a.state() != a.State.Stopped
+                    ]
+                except Exception:
+                    # Fallback to immediate set
+                    vbar.setValue(desired_v)
+        except Exception:
+            logger.exception("Error while ensuring selection visible")

@@ -23,6 +23,8 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QMessageBox,
 )
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QKeySequence, QShortcut
 
 from recent_file_helper import RecentFileHelper
 from ui.main_window import Ui_MainWindow
@@ -46,6 +48,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self._connect_actions()
 
         self.emails: List[MailMessage] = []  # Initialize emails list
+        self.active_mail_index: Optional[int] = (
+            None  # Track currently active email index
+        )
         self._current_active_selection_bar: Optional[SelectionBarWidget] = None
         self._selection_bar_widgets: List[SelectionBarWidget] = []
 
@@ -53,6 +58,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         recent_files = RecentFileHelper().get_recent_files()
         self.set_recent_files(recent_files, self.open_file)
+
+        # Setup keyboard shortcuts for selection navigation
+        self._setup_keyboard_shortcuts()
 
     def _clear_and_load_emails_into_selection_bar(
         self, emails: List[MailMessage]
@@ -100,6 +108,48 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.actionZoom_in_out.triggered.connect(self.zoom_in_out)
         self.actionShow_headers.triggered.connect(self.show_headers)
         self.actionWrap_text.triggered.connect(self.wrap_text)
+
+    def _setup_keyboard_shortcuts(self):
+        """Create application-scoped Up/Down shortcuts to navigate selection bars.
+
+        Using ApplicationShortcut ensures the shortcuts work even when focus is inside
+        a child widget that would otherwise consume arrow key events (e.g., scroll areas).
+        """
+        # Up
+        shortcut_up = QShortcut(QKeySequence(Qt.Key.Key_Up), self)
+        shortcut_up.setContext(Qt.ShortcutContext.ApplicationShortcut)
+        shortcut_up.activated.connect(lambda: self._move_selection(-1))
+
+        # Down
+        shortcut_down = QShortcut(QKeySequence(Qt.Key.Key_Down), self)
+        shortcut_down.setContext(Qt.ShortcutContext.ApplicationShortcut)
+        shortcut_down.activated.connect(lambda: self._move_selection(1))
+
+    def _move_selection(self, delta: int):
+        """Move selection by delta (-1 for up, +1 for down) and show details.
+
+        Does nothing if there's no active selection or if the new index would be out of bounds.
+        """
+        current = getattr(self, "active_mail_index", None)
+        if current is None:
+            return
+        new_index = current + delta
+        if 0 <= new_index < len(self.emails):
+            self.show_email_details(new_index)
+
+            # Ensure the selected widget is visible in the left scroll area
+            try:
+                if hasattr(self, "scrollAreaLeft") and self._selection_bar_widgets:
+                    widget = self._selection_bar_widgets[new_index]
+                    # Use the UI method to handle scrolling
+                    self.ensure_selection_bar_visible(
+                        self._selection_bar_widgets, widget, delta
+                    )
+                    widget.setFocus()
+            except Exception:
+                logger.exception(
+                    "Failed to ensure selection visible after keyboard navigation"
+                )
 
     # ---------------- Logic ----------------
     def open_file(self, file_path) -> None:
@@ -224,6 +274,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             newly_active_bar.set_active(True)
             self._current_active_selection_bar = newly_active_bar
 
+            # Ensure the newly selected bar is visible in the left scroll area
+            try:
+                self.ensure_selection_bar_visible(
+                    self._selection_bar_widgets, newly_active_bar
+                )
+                newly_active_bar.setFocus()
+            except Exception:
+                logger.exception(
+                    "Failed to ensure selection visible after show_email_details"
+                )
+
             logger.debug(f"Showing details for email: {mail_message.subject}")
             start_time = time.perf_counter()
 
@@ -279,6 +340,33 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.tabMailBody.setTabVisible(0, True)  # HTML tab
             self.tabMailBody.setTabVisible(1, True)  # Plain Text tab
             self.tabMailBody.setTabVisible(2, True)  # Raw MIME tab
+
+    def keyPressEvent(self, event):
+        """Handle Up/Down arrow keys to change the selected email.
+
+        - Up: select previous email (index - 1) if not already at top
+        - Down: select next email (index + 1) if not already at bottom
+        If there is no active selection, keys do nothing.
+        """
+        try:
+            key = event.key()
+        except Exception:
+            return super().keyPressEvent(event)
+
+        if key == Qt.Key.Key_Up:
+            current = getattr(self, "active_mail_index", None)
+            if current is not None and current > 0:
+                self.show_email_details(current - 1)
+                event.accept()
+                return
+        elif key == Qt.Key.Key_Down:
+            current = getattr(self, "active_mail_index", None)
+            if current is not None and current < (len(self.emails) - 1):
+                self.show_email_details(current + 1)
+                event.accept()
+                return
+
+        return super().keyPressEvent(event)
 
     def reload_data(self):
         logger.debug("Reload data action triggered")

@@ -140,7 +140,8 @@ class SelectionBarWidget(QWidget):
 
     def _setup_base_widget_properties(self):
         self.setWindowModality(Qt.WindowModality.NonModal)
-        self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        # Allow the selection bar to receive focus so keyboard navigation can set focus
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.PreventContextMenu)
         self.setMouseTracking(
             True
