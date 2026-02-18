@@ -65,6 +65,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # Show welcome screen on startup
         self.show_welcome_screen()
 
+        # Pre-warm the QWebEngineView so that the first real setHtml() call
+        # does not trigger a visible Chromium initialization blink.
+        self.webEngineViewHtml.setHtml("")
+
         # Setup keyboard shortcuts for selection navigation
         self._setup_keyboard_shortcuts()
 
@@ -167,25 +171,20 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 logger.info(f"Loaded {len(self.emails)} emails from {file_path}.")
                 self.statusBar().showMessage(f"Loaded {len(self.emails)} emails.")
                 self._clear_and_load_emails_into_selection_bar(self.emails)
-                # Switch to email detail view
+                # Populate content first so the view is ready before switching
+                self.show_email_details(0)
+                # Switch to email detail view only after content is populated
                 self.show_email_detail_view()
-                # Auto select the first email if available
-                if self.emails:
-                    self.show_email_details(0)
-                    RecentFileHelper.add_recent_file(file_path)
-                    self.set_recent_files(
-                        RecentFileHelper.get_recent_files(), self.open_file
-                    )
+                RecentFileHelper.add_recent_file(file_path)
+                self.set_recent_files(
+                    RecentFileHelper.get_recent_files(), self.open_file
+                )
             else:
                 logger.warning(f"No emails loaded from {file_path}.")
                 self.statusBar().showMessage(f"No emails loaded.")
 
     def open_file_dialog(self) -> Optional[str]:
-        file_dialog: QFileDialog = QFileDialog(self)
-        file_dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
-        file_dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
-
-        file_path, _ = file_dialog.getOpenFileName(
+        file_path, _ = QFileDialog.getOpenFileName(
             self,
             "Open Mailbox File",
             "",
