@@ -31,9 +31,7 @@ from ui.common.ellipsis_label import EllipsisLabel
 class MailHeaderWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.labels: dict[str, QLabel] = (
-            {}
-        )  # Store references to labels for easy updates
+        self.labels: dict[str, QLabel] = {}
         self._setup_ui()
 
     def _setup_ui(self):
@@ -43,7 +41,7 @@ class MailHeaderWidget(QWidget):
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.PreventContextMenu)
 
-        # Main layout
+        # Single grid layout: left column spans full width
         self.gridLayout = QGridLayout(self)
         self.gridLayout.setObjectName("gridLayout")
         self.gridLayout.setContentsMargins(4, 4, 4, 4)
@@ -52,7 +50,7 @@ class MailHeaderWidget(QWidget):
         self.gridLayoutMain = QGridLayout()
         self.gridLayoutMain.setObjectName("gridLayoutMain")
 
-        # Left vertical layout for sender/recipient info
+        # Left vertical layout — subject + all metadata rows
         self.verticalLayoutLeft = QVBoxLayout()
         self.verticalLayoutLeft.setSpacing(3)
         self.verticalLayoutLeft.setObjectName("verticalLayoutLeft")
@@ -61,14 +59,12 @@ class MailHeaderWidget(QWidget):
         self.gridLayoutRight = QGridLayout()
         self.gridLayoutRight.setObjectName("gridLayoutRight")
 
-        # Add layouts to main grid
         self.gridLayoutMain.addLayout(self.verticalLayoutLeft, 0, 0, 1, 1)
         self.gridLayoutMain.addLayout(self.gridLayoutRight, 0, 1, 1, 1)
 
-        # Add central grid to widget's main grid
+        # gridLayoutMain occupies row 0 of the outer gridLayout
         self.gridLayout.addLayout(self.gridLayoutMain, 0, 0, 1, 1)
 
-        # Labels and their layouts will be set up in helper methods
         self._setup_labels()
 
     def _setup_labels(self):
@@ -92,12 +88,10 @@ class MailHeaderWidget(QWidget):
         )
         size_policy_expanding.setHorizontalStretch(1)
 
-        # Size policy for labels that should shrink
         size_policy_label = QSizePolicy(
             QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred
         )
 
-        # Helper to create a label and add it to a horizontal layout
         def create_label_row(
             label_key: str,
             label_text: str,
@@ -106,7 +100,7 @@ class MailHeaderWidget(QWidget):
         ):
             label = QLabel(self)
             label.setObjectName(f"label{label_key}")
-            label.setSizePolicy(size_policy_label)  # Changed to Maximum policy
+            label.setSizePolicy(size_policy_label)
             label.setFont(font_label)
             label.setText(label_text)
             label.setAutoFillBackground(False)
@@ -130,16 +124,37 @@ class MailHeaderWidget(QWidget):
             parent_layout.addWidget(value_label)
             self.labels[f"label{label_key}Value"] = value_label
 
-            # Set stretch factor so value label takes available space
             parent_layout.setStretch(parent_layout.count() - 1, 1)
 
-        # From
+        # ── 1. Subject (prominent, no prefix, first in the left column) ──────
+        font_subject = QFont()
+        font_subject.setPointSize(12)
+        font_subject.setBold(True)
+
+        self.labelSubjectValue = QLabel(self)
+        self.labelSubjectValue.setObjectName("labelSubjectValue")
+        self.labelSubjectValue.setSizePolicy(
+            QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        )
+        self.labelSubjectValue.setFont(font_subject)
+        self.labelSubjectValue.setWordWrap(True)
+        self.labelSubjectValue.setTextInteractionFlags(selectable_label_flags)
+        self.labelSubjectValue.setText("")
+        self.verticalLayoutLeft.addWidget(self.labelSubjectValue)
+
+        # ── 2. From ───────────────────────────────────────────────────────────
         self.horizontalLayoutFrom = QHBoxLayout()
         self.horizontalLayoutFrom.setObjectName("horizontalLayoutFrom")
         create_label_row("From", "from:", self.horizontalLayoutFrom, bold_value=True)
         self.verticalLayoutLeft.addLayout(self.horizontalLayoutFrom)
 
-        # Reply-To
+        # ── 3. To ─────────────────────────────────────────────────────────────
+        self.horizontalLayoutTo = QHBoxLayout()
+        self.horizontalLayoutTo.setObjectName("horizontalLayoutTo")
+        create_label_row("To", "to:", self.horizontalLayoutTo, bold_value=True)
+        self.verticalLayoutLeft.addLayout(self.horizontalLayoutTo)
+
+        # ── 4. Reply-To ───────────────────────────────────────────────────────
         self.horizontalLayoutReplyTo = QHBoxLayout()
         self.horizontalLayoutReplyTo.setObjectName("horizontalLayoutReplyTo")
         create_label_row(
@@ -147,25 +162,19 @@ class MailHeaderWidget(QWidget):
         )
         self.verticalLayoutLeft.addLayout(self.horizontalLayoutReplyTo)
 
-        # To
-        self.horizontalLayoutTo = QHBoxLayout()
-        self.horizontalLayoutTo.setObjectName("horizontalLayoutTo")
-        create_label_row("To", "to:", self.horizontalLayoutTo, bold_value=True)
-        self.verticalLayoutLeft.addLayout(self.horizontalLayoutTo)
-
-        # Cc
+        # ── 5. Cc ─────────────────────────────────────────────────────────────
         self.horizontalLayoutCc = QHBoxLayout()
         self.horizontalLayoutCc.setObjectName("horizontalLayoutCc")
         create_label_row("Cc", "cc:", self.horizontalLayoutCc, bold_value=True)
         self.verticalLayoutLeft.addLayout(self.horizontalLayoutCc)
 
-        # Bcc
+        # ── 6. Bcc ────────────────────────────────────────────────────────────
         self.horizontalLayoutBcc = QHBoxLayout()
         self.horizontalLayoutBcc.setObjectName("horizontalLayoutBcc")
         create_label_row("Bcc", "bcc:", self.horizontalLayoutBcc, bold_value=True)
         self.verticalLayoutLeft.addLayout(self.horizontalLayoutBcc)
 
-        # Mailed-By
+        # ── 7. Mailed-By ──────────────────────────────────────────────────────
         self.horizontalLayoutMailedBy = QHBoxLayout()
         self.horizontalLayoutMailedBy.setObjectName("horizontalLayoutMailedBy")
         create_label_row(
@@ -173,7 +182,7 @@ class MailHeaderWidget(QWidget):
         )
         self.verticalLayoutLeft.addLayout(self.horizontalLayoutMailedBy)
 
-        # Message-Id
+        # ── 8. Message-Id ─────────────────────────────────────────────────────
         self.horizontalLayoutMessageId = QHBoxLayout()
         self.horizontalLayoutMessageId.setObjectName("horizontalLayoutMessageId")
         create_label_row(
@@ -181,51 +190,48 @@ class MailHeaderWidget(QWidget):
         )
         self.verticalLayoutLeft.addLayout(self.horizontalLayoutMessageId)
 
+        # ── Spacer — LAST, so content stays pinned to the top ─────────────────
         self.verticalSpacerContent = QSpacerItem(
             20, 2, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding
         )
         self.verticalLayoutLeft.addItem(self.verticalSpacerContent)
 
+        # ── Right column: Date/Time, Size, then spacer ────────────────────────
         right_view_label_alignment = (
             Qt.AlignmentFlag.AlignLeading
             | Qt.AlignmentFlag.AlignTrailing
             | Qt.AlignmentFlag.AlignTop
         )
 
-        # Date/Time
         self.labelDateTime = QLabel(self)
         self.labelDateTime.setObjectName("labelDateTime")
         self.labelDateTime.setSizePolicy(size_policy_preferred)
         self.labelDateTime.setFont(font_label)
         self.labelDateTime.setAlignment(right_view_label_alignment)
         self.labelDateTime.setTextInteractionFlags(selectable_label_flags)
-        self.labelDateTime.setText("00:00 PM")  # Placeholder text
+        self.labelDateTime.setText("00:00 PM")
         self.gridLayoutRight.addWidget(self.labelDateTime, 0, 0, 1, 1)
 
-        # Mail Size
         self.labelMailSize = QLabel(self)
         self.labelMailSize.setObjectName("labelMailSize")
         self.labelMailSize.setSizePolicy(size_policy_preferred)
         self.labelMailSize.setFont(font_label)
         self.labelMailSize.setAlignment(right_view_label_alignment)
         self.labelMailSize.setTextInteractionFlags(selectable_label_flags)
-        self.labelMailSize.setText("7KB")  # Placeholder text
+        self.labelMailSize.setText("7KB")
         self.gridLayoutRight.addWidget(self.labelMailSize, 1, 0, 1, 1)
 
+        # Spacer in right column — also last
         self.verticalSpacerSide = QSpacerItem(
             20, 2, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding
         )
         self.gridLayoutRight.addItem(self.verticalSpacerSide, 2, 0, 1, 1)
 
     def set_email_data(self, mail_message: MailMessage) -> None:
-        """
-        Populates the mail header labels with data from a MailMessage object.
-        """
+        """Populates the mail header labels with data from a MailMessage object."""
+        self.labelSubjectValue.setText(mail_message.subject or "N/A")
         self.labels["labelFromValue"].setText(
             EllipsisLabel.force_wrap(mail_message.sender or "N/A")
-        )
-        self.labels["labelReplyToValue"].setText(
-            EllipsisLabel.force_wrap(mail_message.reply_to or "N/A")
         )
         self.labels["labelToValue"].setText(
             EllipsisLabel.force_wrap(
@@ -233,6 +239,9 @@ class MailHeaderWidget(QWidget):
                 if mail_message.formatted_to_full
                 else "N/A"
             )
+        )
+        self.labels["labelReplyToValue"].setText(
+            EllipsisLabel.force_wrap(mail_message.reply_to or "N/A")
         )
         self.labels["labelCcValue"].setText(
             EllipsisLabel.force_wrap(

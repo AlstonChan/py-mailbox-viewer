@@ -14,14 +14,7 @@
 
 import os
 from typing import Callable, Sequence
-from PySide6.QtCore import (
-    QRect,
-    QSize,
-    Qt,
-    QPoint,
-    QPropertyAnimation,
-    QEasingCurve,
-)
+from PySide6.QtCore import QRect, QSize, Qt, QPoint, QPropertyAnimation, QEasingCurve
 from PySide6.QtGui import QAction, QIcon, QKeySequence
 from PySide6.QtWidgets import (
     QFrame,
@@ -268,12 +261,10 @@ class Ui_MainWindow(object):
         self.mailHeaderScrollArea.setHorizontalScrollBarPolicy(
             Qt.ScrollBarPolicy.ScrollBarAlwaysOff
         )
-        self.mailHeaderScrollArea.setFrameShape(
-            QFrame.Shape.NoFrame
-        )  # Remove frame border
+        self.mailHeaderScrollArea.setFrameShape(QFrame.Shape.NoFrame)
         self.mailHeaderScrollArea.setStyleSheet(
             "QScrollArea { background-color: palette(base); border: none; }"
-        )  # Set background to base color
+        )
 
         self.mailHeader = MailHeaderWidget()
         self.mailHeader.setStyleSheet(
@@ -336,7 +327,7 @@ class Ui_MainWindow(object):
         self.rawMimeBodyLayout.addWidget(self.textEditRaw)
 
         self.splitterEmail.addWidget(self.tabMailBody)
-        self.splitterEmail.setSizes([400, 900])
+        self.splitterEmail.setSizes([440, 900])
 
     def _setup_menu_bar(self, MainWindow):
         self.menubar = QMenuBar(MainWindow)
