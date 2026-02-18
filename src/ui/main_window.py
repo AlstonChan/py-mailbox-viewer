@@ -64,6 +64,7 @@ class Ui_MainWindow(object):
         self.actionReload.setObjectName("actionReload")
         self.actionReload.setText("Reload")
         self.actionReload.setIcon(QIcon(":/icons/arrow_refresh.png"))
+        self.actionReload.setShortcut(QKeySequence("Ctrl+R"))
 
         self.actionRecent_Files = QMenu(MainWindow)
         self.actionRecent_Files.setObjectName("actionRecent_Files")
@@ -338,23 +339,23 @@ class Ui_MainWindow(object):
         self.menuFile.setObjectName("menuFile")
         self.menuFile.setTitle("File")
 
-        self.menuTool = QMenu(self.menubar)
-        self.menuTool.setObjectName("menuTool")
-        self.menuTool.setTitle("Tool")
+        # self.menuTool = QMenu(self.menubar)
+        # self.menuTool.setObjectName("menuTool")
+        # self.menuTool.setTitle("Tool")
 
         self.menuHelp = QMenu(self.menubar)
         self.menuHelp.setObjectName("menuHelp")
         self.menuHelp.setTitle("Help")
 
-        self.menuView = QMenu(self.menubar)
-        self.menuView.setObjectName("menuView")
-        self.menuView.setTitle("View")
+        # self.menuView = QMenu(self.menubar)
+        # self.menuView.setObjectName("menuView")
+        # self.menuView.setTitle("View")
 
         MainWindow.setMenuBar(self.menubar)
 
         self.menubar.addAction(self.menuFile.menuAction())
-        self.menubar.addAction(self.menuTool.menuAction())
-        self.menubar.addAction(self.menuView.menuAction())
+        # self.menubar.addAction(self.menuTool.menuAction())
+        # self.menubar.addAction(self.menuView.menuAction())
         self.menubar.addAction(self.menuHelp.menuAction())
 
         self.menuFile.addAction(self.actionOpen)
@@ -362,18 +363,18 @@ class Ui_MainWindow(object):
         self.menuFile.addAction(self.actionRecent_Files.menuAction())
         self.menuFile.addAction(self.actionExit)
 
-        self.menuTool.addAction(self.actionSearch)
-        self.menuTool.addAction(self.actionFilter)
-        self.menuTool.addSeparator()
-        self.menuTool.addAction(self.actionExport_Email)
+        # self.menuTool.addAction(self.actionSearch)
+        # self.menuTool.addAction(self.actionFilter)
+        # self.menuTool.addSeparator()
+        # self.menuTool.addAction(self.actionExport_Email)
 
         self.menuHelp.addAction(self.actionAbout)
         self.menuHelp.addAction(self.actionShortcuts)
 
-        self.menuView.addAction(self.actionToggle_preview_pane)
-        self.menuView.addAction(self.actionZoom_in_out)
-        self.menuView.addAction(self.actionShow_headers)
-        self.menuView.addAction(self.actionWrap_text)
+        # self.menuView.addAction(self.actionToggle_preview_pane)
+        # self.menuView.addAction(self.actionZoom_in_out)
+        # self.menuView.addAction(self.actionShow_headers)
+        # self.menuView.addAction(self.actionWrap_text)
 
     def _setup_status_bar(self, MainWindow):
         self.statusbar = QStatusBar(MainWindow)

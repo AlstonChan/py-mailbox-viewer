@@ -284,6 +284,9 @@ class SelectionBarWidget(QWidget):
         self.labelSize.setSizePolicy(sizePolicy)
         self.labelSize.setFont(font)
         self.labelSize.setText("7KB")
+        self.labelSize.setAlignment(
+            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignTop
+        )
         self.hBoxLayoutBottom.addWidget(self.labelSize)
 
         self.formLayout.setLayout(
