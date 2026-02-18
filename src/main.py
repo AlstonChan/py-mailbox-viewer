@@ -12,10 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from collections import defaultdict
-import mailbox
-import email.utils
-from email.header import decode_header, make_header
 from typing import List, Optional
 import time
 
@@ -24,20 +20,17 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QMessageBox,
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QThread
 from PySide6.QtGui import QKeySequence, QShortcut
 
 from recent_file_helper import RecentFileHelper
 from ui.main_window import Ui_MainWindow
-from ui.selection_bar import (
-    SelectionBarWidget,
-)
+from ui.selection_bar import SelectionBarWidget
 from logger_config import logger
 from mail_message import MailMessage
-from body_parser import create_mbox_body_content_provider
+from email_loader import EmailLoaderWorker
 from utils import (
     clear_layout,
-    parse_email_date,
 )
 
 
@@ -54,6 +47,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         )
         self._current_active_selection_bar: Optional[SelectionBarWidget] = None
         self._selection_bar_widgets: List[SelectionBarWidget] = []
+        self._loader_thread: Optional[QThread] = None
+        self._loader_worker: Optional[EmailLoaderWorker] = None
 
         self.statusBar().showMessage("Ready")
 
@@ -167,24 +162,77 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.loaded_file_path = file_path
         if file_path:
             logger.debug(f"Opening file: {file_path}")
-            self.emails = self.load_emails(file_path)
-            if self.emails:
-                logger.info(f"Loaded {len(self.emails)} emails from {file_path}.")
-                self.statusBar().showMessage(f"Loaded {len(self.emails)} emails.")
-                self._clear_and_load_emails_into_selection_bar(self.emails)
-                # Reset splitter override so the first email auto-fits the header
-                self._user_moved_header_splitter = False
-                # Populate content first so the view is ready before switching
-                self.show_email_details(0)
-                # Switch to email detail view only after content is populated
-                self.show_email_detail_view()
-                RecentFileHelper.add_recent_file(file_path)
-                self.set_recent_files(
-                    RecentFileHelper.get_recent_files(), self.open_file
-                )
-            else:
-                logger.warning(f"No emails loaded from {file_path}.")
-                self.statusBar().showMessage(f"No emails loaded.")
+            self._start_loading(file_path)
+
+    def _start_loading(self, file_path: str) -> None:
+        """Start loading emails in a background thread."""
+        # Cancel any existing loading operation
+        if self._loader_thread is not None and self._loader_thread.isRunning():
+            self._loader_thread.quit()
+            self._loader_thread.wait()
+
+        self._set_loading_state(True)
+        self.statusBar().showMessage(f"Loading mail file: {file_path}...")
+
+        self._loader_thread = QThread()
+        self._loader_worker = EmailLoaderWorker(file_path)
+        self._loader_worker.moveToThread(self._loader_thread)
+
+        self._loader_thread.started.connect(self._loader_worker.run)
+        self._loader_worker.finished.connect(self._on_emails_loaded)
+        self._loader_worker.error.connect(self._on_load_error)
+        self._loader_worker.finished.connect(self._loader_thread.quit)
+        self._loader_worker.error.connect(self._loader_thread.quit)
+        self._loader_thread.finished.connect(self._cleanup_loader)
+
+        self._loader_thread.start()
+
+    def _on_emails_loaded(self, emails: List[MailMessage], file_path: str) -> None:
+        """Handle successfully loaded emails (called on the main thread)."""
+        self.emails = emails
+        self._set_loading_state(False)
+        if self.emails:
+            logger.info(f"Loaded {len(self.emails)} emails from {file_path}.")
+            self.statusBar().showMessage(f"Loaded {len(self.emails)} emails.")
+            self._clear_and_load_emails_into_selection_bar(self.emails)
+            self._user_moved_header_splitter = False
+            self.show_email_details(0)
+            self.show_email_detail_view()
+            RecentFileHelper.add_recent_file(file_path)
+            self.set_recent_files(RecentFileHelper.get_recent_files(), self.open_file)
+        else:
+            logger.warning(f"No emails loaded from {file_path}.")
+            self.statusBar().showMessage("No emails loaded.")
+
+    def _on_load_error(self, error_type: str, message: str) -> None:
+        """Handle loading errors (called on the main thread)."""
+        self._set_loading_state(False)
+        self.statusBar().showMessage("Failed to load mail file.")
+        if error_type == "info":
+            logger.warning(message)
+            QMessageBox.information(self, "Info", message)
+        elif error_type == "unsupported":
+            logger.warning(message)
+            QMessageBox.warning(self, "Unsupported File Type", message)
+        else:
+            logger.error(message)
+            QMessageBox.critical(self, "Error", message)
+
+    def _cleanup_loader(self) -> None:
+        """Clean up the loader thread and worker after completion."""
+        if self._loader_worker is not None:
+            self._loader_worker.deleteLater()
+            self._loader_worker = None
+        if self._loader_thread is not None:
+            self._loader_thread.deleteLater()
+            self._loader_thread = None
+
+    def _set_loading_state(self, loading: bool) -> None:
+        """Enable or disable UI elements during loading."""
+        self.actionOpen.setEnabled(not loading)
+        self.actionReload.setEnabled(not loading)
+        self.actionRecent_Files.setEnabled(not loading)
+        self.welcomeUi.pushButtonLoad.setEnabled(not loading)
 
     def open_file_dialog(self) -> Optional[str]:
         file_path, _ = QFileDialog.getOpenFileName(
@@ -194,90 +242,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             "All Files (*);;Mailbox Files (*.mbox *.msf *.eml)",
         )
         return self.open_file(file_path) if file_path else None
-
-    def load_emails(self, file_path: str) -> List[MailMessage]:
-        emails: List[MailMessage] = []
-        try:
-            # First, attempt to open as an mbox file, as they can be extensionless
-            # The mailbox module detects mbox format by content ("From " lines)
-            mbox = mailbox.mbox(file_path)
-            # If successful, proceed with mbox parsing
-            logger.debug(f"Attempting to load {file_path} as MBOX.")
-            for (
-                key,
-                message,
-            ) in mbox.items():  # message is not used, so I can pass mbox and key
-                headers = defaultdict(list)
-                for k, v in message.items():
-                    headers[k].append(str(v))
-                headers = dict(headers)
-
-                size = len(message.as_bytes())
-
-                # Decode RFC 2047 encoded subjects, e.g. =?utf-8?Q?...?=
-                raw_subject = message.get("Subject")
-                try:
-                    subject = (
-                        str(make_header(decode_header(raw_subject)))
-                        if raw_subject
-                        else None
-                    )
-                except Exception:
-                    subject = raw_subject
-
-                sender = message.get("From")
-
-                recipients: List[str] = []
-                for header_name in ["To", "Cc", "Bcc"]:
-                    addresses = email.utils.getaddresses(
-                        message.get_all(header_name, [])
-                    )
-                    recipients.extend([addr for name, addr in addresses if addr])
-
-                date_header_str = message.get("Date")
-                date_header = (
-                    parse_email_date(date_header_str) if date_header_str else None
-                )
-
-                mail_msg = MailMessage(
-                    headers=headers,
-                    size=size,
-                    _body_content_provider=create_mbox_body_content_provider(mbox, key),
-                    subject=subject,
-                    sender=sender,
-                    recipients=recipients,
-                    date_header=date_header,
-                    message_id=message.get("Message-ID"),
-                    source_identifier=f"{file_path}:{key}",
-                )
-                emails.append(mail_msg)
-            return emails
-        except mailbox.FormatError:
-            logger.debug(
-                f"File {file_path} is not a valid MBOX file by content. Checking for other formats."
-            )
-            # If it's not a valid mbox by content, check by extension
-            if file_path.endswith(".eml"):
-                # TODO: Implement .eml parsing later
-                logger.warning(f"EML file parsing not yet implemented for {file_path}.")
-                QMessageBox.information(
-                    self, "Info", "EML file parsing is not yet implemented."
-                )
-            else:
-                logger.warning(f"Unsupported file type or invalid format: {file_path}")
-                QMessageBox.warning(
-                    self,
-                    "Unsupported File Type",
-                    f"The file '{file_path}' is not a recognized mail format (mbox, eml).",
-                )
-        except Exception as e:
-            logger.error(f"Error loading file {file_path}: {e}", exc_info=True)
-            QMessageBox.critical(
-                self,
-                "Error",
-                f"Failed to load file '{file_path}': {e}\nCheck logs for details.",
-            )
-        return []
 
     def show_email_details(self, index: int):
         """
