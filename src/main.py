@@ -59,6 +59,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         recent_files = RecentFileHelper.get_recent_files()
         self.set_recent_files(recent_files, self.open_file)
 
+        # Connect welcome screen's Load File button to open file dialog
+        self.welcomeUi.pushButtonLoad.clicked.connect(self.open_file_dialog)
+
+        # Show welcome screen on startup
+        self.show_welcome_screen()
+
         # Setup keyboard shortcuts for selection navigation
         self._setup_keyboard_shortcuts()
 
@@ -161,6 +167,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 logger.info(f"Loaded {len(self.emails)} emails from {file_path}.")
                 self.statusBar().showMessage(f"Loaded {len(self.emails)} emails.")
                 self._clear_and_load_emails_into_selection_bar(self.emails)
+                # Switch to email detail view
+                self.show_email_detail_view()
                 # Auto select the first email if available
                 if self.emails:
                     self.show_email_details(0)

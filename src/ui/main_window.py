@@ -31,6 +31,7 @@ from PySide6.QtWidgets import (
     QScrollArea,
     QSizePolicy,
     QSplitter,
+    QStackedWidget,
     QStatusBar,
     QTabWidget,
     QWidget,
@@ -40,6 +41,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from constants import APP_NAME
 from ui.mail_header import MailHeaderWidget
+from ui.welcome_screen import WelcomeFrame
 from logger_config import logger
 
 
@@ -212,9 +214,25 @@ class Ui_MainWindow(object):
         self.rightFrameGridLayout.setObjectName("rightFrameGridLayout")
         self.rightFrameGridLayout.setContentsMargins(0, 0, 0, 0)
 
-        self._setup_email_splitter(MainWindow)
+        # Stacked widget to switch between welcome screen and email detail view
+        self.rightStackedWidget = QStackedWidget(self.frameRight)
+        self.rightStackedWidget.setObjectName("rightStackedWidget")
 
-        self.rightFrameGridLayout.addWidget(self.splitterEmail, 0, 0, 1, 1)
+        # Page 0: Welcome screen
+        self.welcomeFrame = QFrame()
+        self.welcomeFrame.setObjectName("welcomeFrame")
+        self.welcomeUi = WelcomeFrame()
+        self.welcomeUi.setupUi(self.welcomeFrame)
+        self.rightStackedWidget.addWidget(self.welcomeFrame)
+
+        # Page 1: Email detail view (header + body splitter)
+        self._setup_email_splitter(MainWindow)
+        self.rightStackedWidget.addWidget(self.splitterEmail)
+
+        # Show welcome screen by default
+        self.rightStackedWidget.setCurrentIndex(0)
+
+        self.rightFrameGridLayout.addWidget(self.rightStackedWidget, 0, 0, 1, 1)
         self.splitterMain.addWidget(self.frameRight)
 
     def _setup_email_splitter(self, MainWindow):
@@ -528,3 +546,11 @@ class Ui_MainWindow(object):
                     vbar.setValue(desired_v)
         except Exception:
             logger.exception("Error while ensuring selection visible")
+
+    def show_welcome_screen(self):
+        """Switch the right panel to the welcome screen."""
+        self.rightStackedWidget.setCurrentIndex(0)
+
+    def show_email_detail_view(self):
+        """Switch the right panel to the email detail view."""
+        self.rightStackedWidget.setCurrentIndex(1)

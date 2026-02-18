@@ -14,6 +14,7 @@
 
 import sys
 from PySide6.QtWidgets import QApplication
+from PySide6.QtGui import QIcon
 from main import MainWindow
 import resources_rc
 
@@ -26,7 +27,9 @@ QCoreApplication.setApplicationName(APP_NAME)
 
 def main():
     app = QApplication(sys.argv)
+    app.setWindowIcon(QIcon(":/icons/logo.png"))
     window = MainWindow()
+    window.setWindowIcon(QIcon(":/icons/logo.png"))
     window.show()
     sys.exit(app.exec())
 
