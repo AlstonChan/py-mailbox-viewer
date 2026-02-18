@@ -15,6 +15,7 @@
 from collections import defaultdict
 import mailbox
 import email.utils
+from email.header import decode_header, make_header
 from typing import List, Optional
 import time
 
@@ -163,7 +164,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     # ---------------- Logic ----------------
     def open_file(self, file_path) -> None:
-        self.loaded_file_path = file_path  # Save the file path for potential reload
+        self.loaded_file_path = file_path
         if file_path:
             logger.debug(f"Opening file: {file_path}")
             self.emails = self.load_emails(file_path)
@@ -171,6 +172,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 logger.info(f"Loaded {len(self.emails)} emails from {file_path}.")
                 self.statusBar().showMessage(f"Loaded {len(self.emails)} emails.")
                 self._clear_and_load_emails_into_selection_bar(self.emails)
+                # Reset splitter override so the first email auto-fits the header
+                self._user_moved_header_splitter = False
                 # Populate content first so the view is ready before switching
                 self.show_email_details(0)
                 # Switch to email detail view only after content is populated
@@ -211,7 +214,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
                 size = len(message.as_bytes())
 
-                subject = message.get("Subject")
+                # Decode RFC 2047 encoded subjects, e.g. =?utf-8?Q?...?=
+                raw_subject = message.get("Subject")
+                try:
+                    subject = (
+                        str(make_header(decode_header(raw_subject)))
+                        if raw_subject
+                        else None
+                    )
+                except Exception:
+                    subject = raw_subject
+
                 sender = message.get("From")
 
                 recipients: List[str] = []
