@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QFileDialog,
     QMessageBox,
+    QDialog,
 )
 from PySide6.QtCore import Qt, QThread
 from PySide6.QtGui import QKeySequence, QShortcut
@@ -26,6 +27,7 @@ from PySide6.QtGui import QKeySequence, QShortcut
 from recent_file_helper import RecentFileHelper
 from ui.main_window import Ui_MainWindow
 from ui.selection_bar import SelectionBarWidget
+from ui.about import AboutDialog
 from logger_config import logger
 from mail_message import MailMessage
 from email_loader import EmailLoaderWorker
@@ -109,7 +111,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.actionExport_Email.triggered.connect(self.export_email)
         self.actionAbout.triggered.connect(self.show_about)
         self.actionShortcuts.triggered.connect(self.show_shortcuts)
-        self.actionGitHub.triggered.connect(self.show_github)
         self.actionToggle_preview_pane.triggered.connect(self.toggle_preview_pane)
         self.actionZoom_in_out.triggered.connect(self.zoom_in_out)
         self.actionShow_headers.triggered.connect(self.show_headers)
@@ -372,12 +373,21 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def show_about(self):
         logger.debug("Show about action triggered")
+        dialog = QDialog(self)
+        dialog.setWindowFlags(
+            Qt.WindowType.Dialog
+            | Qt.WindowType.WindowTitleHint
+            | Qt.WindowType.WindowCloseButtonHint
+            | Qt.WindowType.CustomizeWindowHint
+            | Qt.WindowType.WindowSystemMenuHint
+        )
+        dialog.setFixedSize(504, 431)
+        about_ui = AboutDialog()
+        about_ui.setupUi(dialog)
+        dialog.exec()
 
     def show_shortcuts(self):
         logger.debug("Show shortcuts action triggered")
-
-    def show_github(self):
-        logger.debug("Show GitHub action triggered")
 
     def toggle_preview_pane(self):
         logger.debug("Toggle preview pane action triggered")

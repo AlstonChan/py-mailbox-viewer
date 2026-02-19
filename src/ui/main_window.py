@@ -90,14 +90,12 @@ class Ui_MainWindow(object):
         self.actionAbout = QAction(MainWindow)
         self.actionAbout.setObjectName("actionAbout")
         self.actionAbout.setText("About")
+        self.actionAbout.setIcon(QIcon(":/icons/information.png"))
+        self.actionAbout.setShortcut(QKeySequence("F1"))
 
         self.actionShortcuts = QAction(MainWindow)
         self.actionShortcuts.setObjectName("actionShortcuts")
         self.actionShortcuts.setText("Shortcuts")
-
-        self.actionGitHub = QAction(MainWindow)
-        self.actionGitHub.setObjectName("actionGitHub")
-        self.actionGitHub.setText("GitHub")
 
         self.actionToggle_preview_pane = QAction(MainWindow)
         self.actionToggle_preview_pane.setObjectName("actionToggle_preview_pane")

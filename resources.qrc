@@ -6,5 +6,6 @@
         <file alias="zoom.png">resources/zoom.png</file>
         <file alias="help.png">resources/help.png</file>
         <file alias="logo.png">resources/logo_square.png</file>
+        <file alias="information.png">resources/information.png</file>
     </qresource>
 </RCC>
