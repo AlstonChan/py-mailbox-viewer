@@ -15,7 +15,7 @@
 import os
 from typing import Callable, Sequence
 from PySide6.QtCore import QRect, QSize, Qt, QPoint, QPropertyAnimation, QEasingCurve
-from PySide6.QtGui import QAction, QIcon, QKeySequence
+from PySide6.QtGui import QAction, QActionGroup, QIcon, QKeySequence
 from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
@@ -30,6 +30,9 @@ from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
     QTextEdit,
+    QHBoxLayout,
+    QSpacerItem,
+    QToolButton,
 )
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from constants import APP_NAME
@@ -142,12 +145,71 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.central_widget)
 
     def _setup_left_panel(self, MainWindow):
-        self.scrollAreaLeft = QScrollArea(self.splitterMain)
-        self.scrollAreaLeft.setObjectName("scrollAreaLeft")
+        self.leftPanelWidget = QWidget(self.splitterMain)
+        self.leftPanelWidget.setObjectName("leftPanelWidget")
+        self.verticalLayoutLeft = QVBoxLayout(self.leftPanelWidget)
+        self.verticalLayoutLeft.setObjectName("verticalLayoutLeft")
+        self.verticalLayoutLeft.setContentsMargins(0, 0, 0, 0)
+        self.verticalLayoutLeft.setSpacing(0)
+
+        self.toolbarFrame = QFrame(self.leftPanelWidget)
+        sizePolicy = QSizePolicy(
+            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred
+        )
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.toolbarFrame.sizePolicy().hasHeightForWidth())
+
+        self.toolbarFrame.setSizePolicy(sizePolicy)
+        self.toolbarFrame.setMinimumSize(QSize(0, 35))
+        self.toolbarFrame.setFrameShape(QFrame.Shape.StyledPanel)
+        self.toolbarFrame.setFrameShadow(QFrame.Shadow.Sunken)
+
+        self.horizontalLayout = QHBoxLayout(self.toolbarFrame)
+        self.horizontalLayout.setSpacing(3)
+        self.horizontalLayout.setObjectName("horizontalLayout")
+        self.horizontalLayout.setContentsMargins(3, 3, 3, 3)
+        self.horizontalSpacer = QSpacerItem(
+            165, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
+        )
+
+        self.horizontalLayout.addItem(self.horizontalSpacer)
+
+        self.toolButton = QToolButton(self.toolbarFrame)
+        self.toolButton.setObjectName("toolButton")
+        self.toolButton.setIcon(QIcon(":/icons/sort.png"))
+        self.toolButton.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        self.toolButton.setStyleSheet(
+            """
+            QToolButton {
+                padding: 3px;
+                border: 1px solid transparent;
+                border-radius: 4px;
+                background: transparent;
+            }
+            QToolButton:hover {
+                border: 1px solid palette(mid);
+                background-color: palette(button);
+            }
+            QToolButton:pressed {
+                background-color: palette(midlight);
+            }
+            QToolButton::menu-indicator {
+                image: none;
+            }
+            """
+        )
+
+        self._setup_sort_menu(MainWindow)
+
+        self.horizontalLayout.addWidget(self.toolButton)
+
+        self.verticalLayoutLeft.addWidget(self.toolbarFrame)
+
+        self.scrollAreaLeft = QScrollArea(self.leftPanelWidget)
         leftScrollAreaSizePolicy = QSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
         )
-        # leftScrollAreaSizePolicy.setHorizontalStretch(2)
         leftScrollAreaSizePolicy.setVerticalStretch(2)
         leftScrollAreaSizePolicy.setHeightForWidth(
             self.scrollAreaLeft.sizePolicy().hasHeightForWidth()
@@ -171,7 +233,7 @@ class Ui_MainWindow(object):
         )
         self.scrollAreaWidgetContents.setSizePolicy(scrollAreaWidgetContentsSizePolicy)
         self.scrollAreaLeft.setWidget(self.scrollAreaWidgetContents)
-        self.splitterMain.addWidget(self.scrollAreaLeft)
+        self.verticalLayoutLeft.addWidget(self.scrollAreaLeft)
 
         self.scrollAreaWidgetContents.setStyleSheet(
             """
@@ -187,6 +249,71 @@ class Ui_MainWindow(object):
         self.selectionBarLayout = QVBoxLayout(self.scrollAreaWidgetContents)
         self.selectionBarLayout.setContentsMargins(4, 4, 4, 4)
         self.selectionBarLayout.setSpacing(5)  # Add some spacing between selection bars
+
+        self.splitterMain.addWidget(self.leftPanelWidget)
+
+    def _setup_sort_menu(self, MainWindow):
+        self.sortMenu = QMenu(self.toolButton)
+        self.sortMenu.setObjectName("sortMenu")
+
+        # Sort field actions (mutually exclusive)
+        self.sortFieldGroup = QActionGroup(MainWindow)
+        self.sortFieldGroup.setExclusive(True)
+
+        self.actionSortByDate = QAction("Date", MainWindow)
+        self.actionSortByDate.setObjectName("actionSortByDate")
+        self.actionSortByDate.setCheckable(True)
+        self.actionSortByDate.setChecked(True)
+        self.sortFieldGroup.addAction(self.actionSortByDate)
+
+        self.actionSortBySize = QAction("Size", MainWindow)
+        self.actionSortBySize.setObjectName("actionSortBySize")
+        self.actionSortBySize.setCheckable(True)
+        self.sortFieldGroup.addAction(self.actionSortBySize)
+
+        self.actionSortByTo = QAction("To", MainWindow)
+        self.actionSortByTo.setObjectName("actionSortByTo")
+        self.actionSortByTo.setCheckable(True)
+        self.sortFieldGroup.addAction(self.actionSortByTo)
+
+        self.actionSortByFrom = QAction("From", MainWindow)
+        self.actionSortByFrom.setObjectName("actionSortByFrom")
+        self.actionSortByFrom.setCheckable(True)
+        self.sortFieldGroup.addAction(self.actionSortByFrom)
+
+        self.actionSortBySubject = QAction("Subject", MainWindow)
+        self.actionSortBySubject.setObjectName("actionSortBySubject")
+        self.actionSortBySubject.setCheckable(True)
+        self.sortFieldGroup.addAction(self.actionSortBySubject)
+
+        self.sortMenu.addAction(self.actionSortByDate)
+        self.sortMenu.addAction(self.actionSortBySize)
+        self.sortMenu.addAction(self.actionSortByTo)
+        self.sortMenu.addAction(self.actionSortByFrom)
+        self.sortMenu.addAction(self.actionSortBySubject)
+
+        # Separator
+        self.sortMenu.addSeparator()
+
+        # Sort order actions (mutually exclusive)
+        self.sortOrderGroup = QActionGroup(MainWindow)
+        self.sortOrderGroup.setExclusive(True)
+
+        self.actionSortAscending = QAction("Ascending", MainWindow)
+        self.actionSortAscending.setObjectName("actionSortAscending")
+        self.actionSortAscending.setCheckable(True)
+
+        self.sortOrderGroup.addAction(self.actionSortAscending)
+        self.actionSortDescending = QAction("Descending", MainWindow)
+        self.actionSortDescending.setObjectName("actionSortDescending")
+        self.actionSortDescending.setCheckable(True)
+        self.actionSortDescending.setChecked(True)
+        self.sortOrderGroup.addAction(self.actionSortDescending)
+
+        self.sortMenu.addAction(self.actionSortAscending)
+        self.sortMenu.addAction(self.actionSortDescending)
+
+        self.toolButton.setMenu(self.sortMenu)
 
     def _setup_right_panel(self, MainWindow):
         self.frameRight = QFrame(self.splitterMain)
@@ -367,7 +494,7 @@ class Ui_MainWindow(object):
         # self.menuTool.addAction(self.actionExport_Email)
 
         self.menuHelp.addAction(self.actionAbout)
-        self.menuHelp.addAction(self.actionShortcuts)
+        # self.menuHelp.addAction(self.actionShortcuts)
 
         # self.menuView.addAction(self.actionToggle_preview_pane)
         # self.menuView.addAction(self.actionZoom_in_out)

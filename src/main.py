@@ -14,6 +14,7 @@
 
 from typing import List, Optional
 import time
+from datetime import datetime
 
 from PySide6.QtWidgets import (
     QMainWindow,
@@ -25,6 +26,7 @@ from PySide6.QtCore import Qt, QThread
 from PySide6.QtGui import QKeySequence, QShortcut
 
 from recent_file_helper import RecentFileHelper
+from sort_setting_helper import SortSettingHelper, SortField, SortOrder
 from ui.main_window import Ui_MainWindow
 from ui.selection_bar import SelectionBarWidget
 from ui.about import AboutDialog
@@ -69,6 +71,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # Setup keyboard shortcuts for selection navigation
         self._setup_keyboard_shortcuts()
+
+        # Restore saved sort settings into the UI
+        self._restore_sort_settings()
 
     def _clear_and_load_emails_into_selection_bar(
         self, emails: List[MailMessage]
@@ -115,6 +120,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.actionZoom_in_out.triggered.connect(self.zoom_in_out)
         self.actionShow_headers.triggered.connect(self.show_headers)
         self.actionWrap_text.triggered.connect(self.wrap_text)
+
+        # Sort menu connections
+        self.sortFieldGroup.triggered.connect(self._on_sort_field_changed)
+        self.sortOrderGroup.triggered.connect(self._on_sort_order_changed)
 
     def _setup_keyboard_shortcuts(self):
         """Create application-scoped Up/Down shortcuts to navigate selection bars.
@@ -195,6 +204,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if self.emails:
             logger.info(f"Loaded {len(self.emails)} emails from {file_path}.")
             self.statusBar().showMessage(f"Loaded {len(self.emails)} emails.")
+            self._sort_emails()
             self._clear_and_load_emails_into_selection_bar(self.emails)
             self._user_moved_header_splitter = False
             self.show_email_details(0)
@@ -352,6 +362,99 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 return
 
         return super().keyPressEvent(event)
+
+    def _restore_sort_settings(self) -> None:
+        """Restore saved sort field and order into the UI menu actions."""
+        sort_field = SortSettingHelper.get_sort_field()
+        sort_order = SortSettingHelper.get_sort_order()
+
+        field_action_map = {
+            SortField.DATE: self.actionSortByDate,
+            SortField.SIZE: self.actionSortBySize,
+            SortField.TO: self.actionSortByTo,
+            SortField.FROM: self.actionSortByFrom,
+            SortField.SUBJECT: self.actionSortBySubject,
+        }
+        action = field_action_map.get(sort_field)
+        if action:
+            action.setChecked(True)
+
+        if sort_order == SortOrder.ASCENDING:
+            self.actionSortAscending.setChecked(True)
+        else:
+            self.actionSortDescending.setChecked(True)
+
+        logger.debug(
+            f"Restored sort settings: field={sort_field.value}, order={sort_order.value}"
+        )
+
+    def _on_sort_field_changed(self, action) -> None:
+        """Persist the selected sort field when the user changes it."""
+        action_field_map = {
+            self.actionSortByDate: SortField.DATE,
+            self.actionSortBySize: SortField.SIZE,
+            self.actionSortByTo: SortField.TO,
+            self.actionSortByFrom: SortField.FROM,
+            self.actionSortBySubject: SortField.SUBJECT,
+        }
+        field = action_field_map.get(action)
+        if field:
+            SortSettingHelper.set_sort_field(field)
+            self._apply_sort()
+
+    def _on_sort_order_changed(self, action) -> None:
+        """Persist the selected sort order when the user changes it."""
+        if action == self.actionSortAscending:
+            SortSettingHelper.set_sort_order(SortOrder.ASCENDING)
+        elif action == self.actionSortDescending:
+            SortSettingHelper.set_sort_order(SortOrder.DESCENDING)
+        self._apply_sort()
+
+    def _apply_sort(self) -> None:
+        """Sort the current emails and refresh the selection bar, preserving the active email."""
+        if not self.emails:
+            return
+
+        # Remember the currently viewed email object before re-sorting
+        active_mail = (
+            self.emails[self.active_mail_index]
+            if self.active_mail_index is not None
+            and 0 <= self.active_mail_index < len(self.emails)
+            else None
+        )
+
+        self._sort_emails()
+        self._clear_and_load_emails_into_selection_bar(self.emails)
+
+        # Restore selection to the same email after re-sorting
+        if active_mail is not None:
+            try:
+                new_index = self.emails.index(active_mail)
+            except ValueError:
+                new_index = 0
+            self.show_email_details(new_index)
+        else:
+            self.show_email_details(0)
+
+    def _sort_emails(self) -> None:
+        """Sort self.emails in-place based on the current sort field and order settings."""
+        sort_field = SortSettingHelper.get_sort_field()
+        sort_order = SortSettingHelper.get_sort_order()
+        reverse = sort_order == SortOrder.DESCENDING
+
+        key_funcs = {
+            SortField.DATE: lambda m: m.date_header or datetime.min,
+            SortField.SIZE: lambda m: m.size or 0,
+            SortField.TO: lambda m: (m.to or "").lower(),
+            SortField.FROM: lambda m: (m.from_ or "").lower(),
+            SortField.SUBJECT: lambda m: (m.subject or "").lower(),
+        }
+        key_func = key_funcs.get(sort_field, key_funcs[SortField.DATE])
+
+        self.emails.sort(key=key_func, reverse=reverse)
+        logger.debug(
+            f"Sorted {len(self.emails)} emails by {sort_field.value} ({sort_order.value})"
+        )
 
     def reload_data(self):
         logger.debug("Reload data action triggered")

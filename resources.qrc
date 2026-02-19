@@ -7,5 +7,6 @@
         <file alias="help.png">resources/help.png</file>
         <file alias="logo.png">resources/logo_square.png</file>
         <file alias="information.png">resources/information.png</file>
+        <file alias="sort.png">resources/sort.png</file>
     </qresource>
 </RCC>
