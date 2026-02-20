@@ -302,11 +302,13 @@ class SelectionBarWidget(QWidget):
                 background-color: palette(mid);
                 color: palette(mid-text);
             }
+            QFrame#frameMain * {
+                background: transparent;
+            }
             """
         )
 
     def _apply_hover_style(self):
-        # Hover style for frameMain
         self.frameMain.setStyleSheet(
             """
                 QFrame#frameMain {
@@ -315,11 +317,13 @@ class SelectionBarWidget(QWidget):
                     background-color: palette(alternate-base);
                     color: palette(window-text);
                 }
+                QFrame#frameMain * {
+                    background: transparent;
+                }
             """
         )
 
     def _apply_active_style(self):
-        # Active style for frameMain
         self.frameMain.setStyleSheet(
             """
                 QFrame#frameMain {
@@ -327,6 +331,9 @@ class SelectionBarWidget(QWidget):
                     border-radius: 4px;
                     background-color: palette(highlight);
                     color: palette(window-text);
+                }
+                QFrame#frameMain * {
+                    background: transparent;
                 }
             """
         )

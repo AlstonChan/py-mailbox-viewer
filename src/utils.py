@@ -14,7 +14,7 @@
 
 from typing import Optional, Union
 import email.utils
-from datetime import datetime
+from datetime import datetime, timezone
 from logger_config import (
     logger,
 )
@@ -23,9 +23,14 @@ from PySide6.QtWidgets import QLayout, QWidget, QLayoutItem
 
 
 def parse_email_date(date_string: str) -> Optional[datetime]:
-    """Parses an email date string into a datetime object."""
+    """Parses an email date string into a timezone-aware datetime object."""
     try:
-        return email.utils.parsedate_to_datetime(date_string)
+        dt = email.utils.parsedate_to_datetime(date_string)
+        # Ensure the result is always timezone-aware so that comparisons
+        # between dates never mix offset-naive and offset-aware datetimes.
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
     except (TypeError, ValueError):
         logger.warning(f"Could not parse date string: {date_string}")
         return None

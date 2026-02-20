@@ -14,7 +14,7 @@
 
 from typing import List, Optional
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 from PySide6.QtWidgets import (
     QMainWindow,
@@ -28,14 +28,10 @@ from PySide6.QtGui import QKeySequence, QShortcut
 from recent_file_helper import RecentFileHelper
 from sort_setting_helper import SortSettingHelper, SortField, SortOrder
 from ui.main_window import Ui_MainWindow
-from ui.selection_bar import SelectionBarWidget
 from ui.about import AboutDialog
 from logger_config import logger
 from mail_message import MailMessage
 from email_loader import EmailLoaderWorker
-from utils import (
-    clear_layout,
-)
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
@@ -49,8 +45,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.active_mail_index: Optional[int] = (
             None  # Track currently active email index
         )
-        self._current_active_selection_bar: Optional[SelectionBarWidget] = None
-        self._selection_bar_widgets: List[SelectionBarWidget] = []
         self._loader_thread: Optional[QThread] = None
         self._loader_worker: Optional[EmailLoaderWorker] = None
 
@@ -61,6 +55,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # Connect welcome screen's Load File button to open file dialog
         self.welcomeUi.pushButtonLoad.clicked.connect(self.open_file_dialog)
+
+        # Connect virtual selection list click
+        self.virtualSelectionList.itemClicked.connect(self.show_email_details)
 
         # Show welcome screen on startup
         self.show_welcome_screen()
@@ -74,38 +71,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # Restore saved sort settings into the UI
         self._restore_sort_settings()
-
-    def _clear_and_load_emails_into_selection_bar(
-        self, emails: List[MailMessage]
-    ) -> None:
-        """
-        Clears existing selection bars and populates the selection bar area
-        with MailMessage objects.
-        """
-        # Clear existing widgets from the layout
-        clear_layout(self.selectionBarLayout)  # Using clear_layout from utils
-        self._selection_bar_widgets.clear()  # Clear references to old widgets                                                                      │
-        self._current_active_selection_bar = None  # Clear active selection
-
-        # Add new selection bars
-        if not emails:
-            self.selectionBarLayout.addStretch(1)  # Add stretch even if no emails
-            return
-
-        for index, mail_message in enumerate(emails):
-            selection_bar_widget = SelectionBarWidget(
-                index, self.scrollAreaWidgetContents
-            )
-            selection_bar_widget.set_email_data(mail_message)
-            selection_bar_widget.clicked.connect(self.show_email_details)
-
-            self.selectionBarLayout.addWidget(selection_bar_widget)
-            self._selection_bar_widgets.append(
-                selection_bar_widget
-            )  # Store widget reference
-
-        # Add a stretch to push all selection bars to the top
-        self.selectionBarLayout.addStretch(1)
 
     def _connect_actions(self) -> None:
         self.actionOpen.triggered.connect(self.open_file_dialog)
@@ -146,26 +111,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         Does nothing if there's no active selection or if the new index would be out of bounds.
         """
-        current = getattr(self, "active_mail_index", None)
+        current = self.active_mail_index
         if current is None:
             return
         new_index = current + delta
         if 0 <= new_index < len(self.emails):
             self.show_email_details(new_index)
-
-            # Ensure the selected widget is visible in the left scroll area
-            try:
-                if hasattr(self, "scrollAreaLeft") and self._selection_bar_widgets:
-                    widget = self._selection_bar_widgets[new_index]
-                    # Use the UI method to handle scrolling
-                    self.ensure_selection_bar_visible(
-                        self._selection_bar_widgets, widget, delta
-                    )
-                    widget.setFocus()
-            except Exception:
-                logger.exception(
-                    "Failed to ensure selection visible after keyboard navigation"
-                )
 
     # ---------------- Logic ----------------
     def open_file(self, file_path) -> None:
@@ -205,7 +156,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             logger.info(f"Loaded {len(self.emails)} emails from {file_path}.")
             self.statusBar().showMessage(f"Loaded {len(self.emails)} emails.")
             self._sort_emails()
-            self._clear_and_load_emails_into_selection_bar(self.emails)
+            self.virtualSelectionList.set_emails(self.emails)
             self._user_moved_header_splitter = False
             self.show_email_details(0)
             self.show_email_detail_view()
@@ -262,23 +213,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             mail_message = self.emails[index]
             self.active_mail_index = index
 
-            if self._current_active_selection_bar is not None:
-                self._current_active_selection_bar.set_active(False)
-
-            newly_active_bar = self._selection_bar_widgets[index]
-            newly_active_bar.set_active(True)
-            self._current_active_selection_bar = newly_active_bar
-
-            # Ensure the newly selected bar is visible in the left scroll area
-            try:
-                self.ensure_selection_bar_visible(
-                    self._selection_bar_widgets, newly_active_bar
-                )
-                newly_active_bar.setFocus()
-            except Exception:
-                logger.exception(
-                    "Failed to ensure selection visible after show_email_details"
-                )
+            # Update the virtual selection list highlight and scroll
+            self.virtualSelectionList.set_active_index(index)
+            self.virtualSelectionList.scroll_to_index(index)
 
             logger.debug(f"Showing details for email: {mail_message.subject}")
             start_time = time.perf_counter()
@@ -424,7 +361,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         )
 
         self._sort_emails()
-        self._clear_and_load_emails_into_selection_bar(self.emails)
+        self.virtualSelectionList.set_emails(self.emails)
 
         # Restore selection to the same email after re-sorting
         if active_mail is not None:
@@ -442,8 +379,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         sort_order = SortSettingHelper.get_sort_order()
         reverse = sort_order == SortOrder.DESCENDING
 
+        _DATE_MIN = datetime.min.replace(tzinfo=timezone.utc)
+
         key_funcs = {
-            SortField.DATE: lambda m: m.date_header or datetime.min,
+            SortField.DATE: lambda m: m.date_header or _DATE_MIN,
             SortField.SIZE: lambda m: m.size or 0,
             SortField.TO: lambda m: (m.to or "").lower(),
             SortField.FROM: lambda m: (m.from_ or "").lower(),

@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from typing import Callable, Optional, Tuple
+import email
 from email.message import Message
 import mailbox
 from logger_config import logger
@@ -100,6 +101,44 @@ def create_mbox_body_content_provider(
         except Exception as e:
             logger.error(
                 f"Error retrieving or parsing mbox message with key '{key}': {e}",
+                exc_info=True,
+            )
+            return None, None, None
+
+    return body_content_provider_func
+
+
+def create_file_body_content_provider(
+    file_path: str, msg_start: int, msg_length: int
+) -> Callable[[], Tuple[Optional[str], Optional[str], Optional[str]]]:
+    """
+    Returns a callable that, when invoked, reads the raw message bytes from the
+    mbox file at the given offset and extracts body content.
+
+    This avoids keeping the entire mbox object in memory and supports lazy
+    loading of message bodies directly from disk.
+
+    Args:
+        file_path (str): Path to the mbox file.
+        msg_start (int): Byte offset where the message starts (after the 'From ' line).
+        msg_length (int): Number of bytes for this message.
+
+    Returns:
+        Callable that returns (raw_body, plain_body, html_body).
+    """
+
+    def body_content_provider_func() -> (
+        Tuple[Optional[str], Optional[str], Optional[str]]
+    ):
+        try:
+            with open(file_path, "rb") as f:
+                f.seek(msg_start)
+                raw_bytes = f.read(msg_length)
+            msg = email.message_from_bytes(raw_bytes)
+            return _extract_body_parts(msg)
+        except Exception as e:
+            logger.error(
+                f"Error reading message at offset {msg_start} from '{file_path}': {e}",
                 exc_info=True,
             )
             return None, None, None
