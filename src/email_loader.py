@@ -148,6 +148,10 @@ class EmailLoaderWorker(QObject):
                             if raw_subject
                             else None
                         )
+                        if subject:
+                            # Collapse folded whitespace (\n, \r\n followed by
+                            # whitespace) left over from RFC 5322 header folding
+                            subject = " ".join(subject.splitlines()).strip()
                     except Exception:
                         subject = raw_subject
 

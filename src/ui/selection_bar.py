@@ -254,6 +254,7 @@ class SelectionBarWidget(QWidget):
 
         # Label Subject
         self.labelSubject = EllipsisLabel("", self.frameMain)
+        self.labelSubject.setWordWrap(False)
         self.labelSubject.setObjectName("labelSubject")
         sizePolicy1.setHeightForWidth(
             self.labelSubject.sizePolicy().hasHeightForWidth()
