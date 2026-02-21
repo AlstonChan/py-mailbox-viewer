@@ -244,6 +244,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.textEditRaw.setPlainText("")
                 self.tabMailBody.setTabVisible(2, False)
 
+            # Populate Attachments tab
+            attachments = mail_message.attachments
+            if attachments:
+                self.tabMailBody.setTabVisible(3, True)
+                self.attachmentListWidget.set_attachments(attachments)
+            else:
+                self.attachmentListWidget.clear()
+                self.tabMailBody.setTabVisible(3, False)
+
             # Always select the first available tab
             for i in range(self.tabMailBody.count()):
                 if self.tabMailBody.isTabVisible(i):
@@ -269,9 +278,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.webEngineViewHtml.setHtml("")
             self.textEditPlain.setPlainText("")
             self.textEditRaw.setPlainText("")
+            self.attachmentListWidget.clear()
             self.tabMailBody.setTabVisible(0, True)  # HTML tab
             self.tabMailBody.setTabVisible(1, True)  # Plain Text tab
             self.tabMailBody.setTabVisible(2, True)  # Raw MIME tab
+            self.tabMailBody.setTabVisible(3, True)  # Attachments tab
 
     def keyPressEvent(self, event):
         """Handle Up/Down arrow keys to change the selected email.

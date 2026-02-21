@@ -18,6 +18,9 @@ from logger_config import logger
 import re
 import email.utils
 
+# Import at module level – body_parser is a sibling module
+from body_parser import Attachment
+
 
 class MailMessage:
     """
@@ -44,6 +47,7 @@ class MailMessage:
         source_identifier: Optional[
             Any
         ] = None,  # Unique ID/path for the original source
+        _attachment_provider: Optional[Callable[[], List[Attachment]]] = None,
     ):
         """
         Initializes a MailMessage object.
@@ -63,6 +67,8 @@ class MailMessage:
             message_id (Optional[str]): The Message-ID of the email.
             source_identifier (Optional[Any]): An identifier for the original source of the mail
                                             (e.g., file path, index in an mbox file).
+            _attachment_provider (Optional[Callable[[], List[Attachment]]]): A callable (function) that, when invoked,
+                                            returns a list of attachments.
         """
         self.headers = headers
         self.size = size
@@ -84,6 +90,11 @@ class MailMessage:
         self.received_date = received_date
         self.message_id = message_id
         self.source_identifier = source_identifier
+
+        # Attachment provider (lazy)
+        self._attachment_provider = _attachment_provider
+        self._cached_attachments: Optional[List[Attachment]] = None
+        self._attachments_loaded: bool = False
 
     def _load_body_content(self) -> None:
         """
@@ -134,6 +145,28 @@ class MailMessage:
         """Returns the HTML body content of the email."""
         self._load_body_content()
         return self._cached_html_body
+
+    @property
+    def attachments(self) -> List[Attachment]:
+        """Returns the list of attachments for this email (lazy-loaded)."""
+        if not self._attachments_loaded:
+            if self._attachment_provider is not None:
+                try:
+                    self._cached_attachments = self._attachment_provider()
+                    logger.debug(
+                        f"Loaded {len(self._cached_attachments)} attachment(s) for "
+                        f"{self.message_id or self.source_identifier}"
+                    )
+                except Exception as e:
+                    logger.error(
+                        f"Failed to load attachments for {self.message_id or self.source_identifier}: {e}",
+                        exc_info=True,
+                    )
+                    self._cached_attachments = []
+            else:
+                self._cached_attachments = []
+            self._attachments_loaded = True
+        return self._cached_attachments or []
 
     def get_body(self) -> str:
         """
@@ -302,7 +335,7 @@ class MailMessage:
         """Returns the Message-ID with angle brackets removed, if present."""
         if self.message_id:
             # Remove leading '<' and trailing '>' if they exist
-            return self.message_id.strip('<>').strip()
+            return self.message_id.strip("<>").strip()
         return None
 
     @property

@@ -39,6 +39,7 @@ from constants import APP_NAME
 from ui.mail_header import MailHeaderWidget
 from ui.welcome_screen import WelcomeFrame
 from ui.virtual_selection_list import VirtualSelectionBarList
+from ui.attachment_list import AttachmentListWidget
 from logger_config import logger
 
 
@@ -419,6 +420,17 @@ class Ui_MainWindow(object):
         self.textEditRaw.setReadOnly(True)
         self.textEditRaw.setContentsMargins(0, 0, 0, 0)
         self.rawMimeBodyLayout.addWidget(self.textEditRaw)
+
+        # Setup Attachments Tab
+        self.tabAttachments = QWidget()
+        self.tabAttachments.setObjectName("tabAttachments")
+        self.tabMailBody.addTab(self.tabAttachments, "Attachments")
+        self.attachmentsBodyLayout = QVBoxLayout(self.tabAttachments)
+        self.attachmentsBodyLayout.setObjectName("attachmentsBodyLayout")
+        self.attachmentsBodyLayout.setContentsMargins(0, 0, 0, 0)
+        self.attachmentListWidget = AttachmentListWidget(self.tabAttachments)
+        self.attachmentListWidget.setObjectName("attachmentListWidget")
+        self.attachmentsBodyLayout.addWidget(self.attachmentListWidget)
 
         self.splitterEmail.addWidget(self.tabMailBody)
         self.splitterEmail.setSizes([440, 900])

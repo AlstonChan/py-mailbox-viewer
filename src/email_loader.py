@@ -25,7 +25,10 @@ from PySide6.QtCore import QObject, Signal
 
 from logger_config import logger
 from mail_message import MailMessage
-from body_parser import create_file_body_content_provider
+from body_parser import (
+    create_file_body_content_provider,
+    create_file_attachment_provider,
+)
 from utils import parse_email_date
 
 # Byte prefix that marks the start of a new message in mbox format
@@ -181,6 +184,9 @@ class EmailLoaderWorker(QObject):
                         date_header=date_header,
                         message_id=message.get("Message-ID"),
                         source_identifier=f"{self.file_path}:{index}",
+                        _attachment_provider=create_file_attachment_provider(
+                            self.file_path, msg_start, msg_length
+                        ),
                     )
                     emails.append(mail_msg)
                 except Exception as e:

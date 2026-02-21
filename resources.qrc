@@ -8,5 +8,16 @@
         <file alias="logo.png">resources/logo_square.png</file>
         <file alias="information.png">resources/information.png</file>
         <file alias="sort.png">resources/sort.png</file>
+        <file alias="file_extension_eml.png">resources/file_extension_eml.png</file>
+        <file alias="document_green.png">resources/document_green.png</file>
+        <file alias="file_extension_gif.png">resources/file_extension_gif.png</file>
+        <file alias="file_extension_htm.png">resources/file_extension_htm.png</file>
+        <file alias="file_extension_html.png">resources/file_extension_html.png</file>
+        <file alias="file_extension_jpeg.png">resources/file_extension_jpeg.png</file>
+        <file alias="file_extension_mp4.png">resources/file_extension_mp4.png</file>
+        <file alias="file_extension_jpg.png">resources/file_extension_jpg.png</file>
+        <file alias="file_extension_pdf.png">resources/file_extension_pdf.png</file>
+        <file alias="file_extension_txt.png">resources/file_extension_txt.png</file>
+        <file alias="file_extension_wav.png">resources/file_extension_wav.png</file>
     </qresource>
 </RCC>
