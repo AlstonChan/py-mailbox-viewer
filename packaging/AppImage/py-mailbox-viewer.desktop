@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=Py Mailbox Viewer
+Exec=py-mailbox-viewer
+Icon=py-mailbox-viewer
+Type=Application
+Categories=Utility;

@@ -2,3 +2,14 @@
 __pycache__
 build/
 dist/
+
+# AppImage build directory
+packaging/AppImage/usr/bin
+packaging/AppImage/.DirIcon
+
+# Generated AppImage files
+*.AppImage
+
+# Temporary AppImage builder files
+appimage-builder-cache/
+appimage-builder-build/

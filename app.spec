@@ -1,9 +1,15 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+from pathlib import Path
+import platform
+
+project_root = Path.cwd()
+
+app_path = project_root / "src" / "app.py"
 
 a = Analysis(
-    ['src\\app.py'],
-    pathex=[],
+    [str(app_path)],
+    pathex=[str(project_root)],
     binaries=[],
     datas=[],
     hiddenimports=[],
@@ -14,6 +20,7 @@ a = Analysis(
     noarchive=False,
     optimize=0,
 )
+
 pyz = PYZ(a.pure)
 
 exe = EXE(
@@ -28,12 +35,9 @@ exe = EXE(
     upx=True,
     console=False,
     disable_windowed_traceback=False,
-    argv_emulation=False,
-    target_arch=None,
-    codesign_identity=None,
-    entitlements_file=None,
-    icon='icon.ico'
+    icon='icon.ico',
 )
+
 coll = COLLECT(
     exe,
     a.binaries,
