@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QFont
+from typing import cast
+from PySide6.QtCore import Qt, Signal, QObject, QEvent
+from PySide6.QtGui import QFont, QMouseEvent, QEnterEvent
 from PySide6.QtWidgets import (
     QFormLayout,
     QFrame,
@@ -66,60 +67,63 @@ class SelectionBarWidget(QWidget):
             if w is not None:
                 w.installEventFilter(self)
 
-    def eventFilter(self, watched, event):
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
         et = event.type()
-        # Observe mouse events from children but do NOT consume them.
-        # This allows selectable labels to receive press/move/release for text selection
-        # while we still detect click gestures by tracking press/move/release positions.
         if et in (
             event.Type.MouseButtonPress,
             event.Type.MouseMove,
             event.Type.MouseButtonRelease,
         ):
             try:
+                mouse_event = cast(QMouseEvent, event)
+                watched_widget = cast(QWidget, watched)
                 if et == event.Type.MouseButtonPress:
-                    if event.button() == Qt.MouseButton.LeftButton:
-                        # Map child-local coordinates to parent (self) coordinates
-                        pos = watched.mapTo(self, event.position().toPoint())
+                    if mouse_event.button() == Qt.MouseButton.LeftButton:
+                        pos = watched_widget.mapTo(
+                            self, mouse_event.position().toPoint()
+                        )
                         self._pressed = True
                         self._press_pos = pos
                 elif et == event.Type.MouseMove:
                     if self._pressed and self._press_pos is not None:
-                        pos = watched.mapTo(self, event.position().toPoint())
+                        pos = watched_widget.mapTo(
+                            self, mouse_event.position().toPoint()
+                        )
                         if (pos - self._press_pos).manhattanLength() >= 4:
-                            # User moved enough to constitute a drag/selection
                             self._pressed = False
                 elif et == event.Type.MouseButtonRelease:
-                    if event.button() == Qt.MouseButton.LeftButton and self._pressed:
-                        pos = watched.mapTo(self, event.position().toPoint())
+                    if (
+                        mouse_event.button() == Qt.MouseButton.LeftButton
+                        and self._pressed
+                    ):
+                        pos = watched_widget.mapTo(
+                            self, mouse_event.position().toPoint()
+                        )
                         if self.rect().contains(pos):
                             logger.debug(f"Selection bar clicked: Index {self.index}")
                             self.clicked.emit(self.index)
-                    # Reset press state regardless
                     self._pressed = False
                     self._press_pos = None
             except Exception:
-                # Be defensive: don't let unexpected event shapes break selection
                 self._pressed = False
                 self._press_pos = None
-            # Do not consume the event here; allow child widget to handle selection
             return False
         return super().eventFilter(watched, event)
 
-    def mousePressEvent(self, event):
+    def mousePressEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
             self._pressed = True
             self._press_pos = event.position().toPoint()
         super().mousePressEvent(event)
 
-    def mouseMoveEvent(self, event):
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:
         # If user is selecting text or dragging, don't treat it as a click.
         if self._pressed and self._press_pos is not None:
             if (event.position().toPoint() - self._press_pos).manhattanLength() >= 4:
                 self._pressed = False
         super().mouseMoveEvent(event)
 
-    def mouseReleaseEvent(self, event):
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.MouseButton.LeftButton and self._pressed:
             # Only emit if release happens inside the widget
             if self.rect().contains(event.position().toPoint()):
@@ -354,14 +358,14 @@ class SelectionBarWidget(QWidget):
             else:
                 self._apply_default_style()
 
-    def enterEvent(self, event):
+    def enterEvent(self, event: QEnterEvent) -> None:
         """Event handler for mouse entering the widget area."""
         self._is_hovered = True
         if not self._is_active:  # Only apply hover if not active
             self._apply_hover_style()
         super().enterEvent(event)
 
-    def leaveEvent(self, event):
+    def leaveEvent(self, event: QEvent) -> None:
         """Event handler for mouse leaving the widget area."""
         self._is_hovered = False
         if not self._is_active:  # Only apply default if not active
