@@ -15,7 +15,7 @@
 import logging
 import os
 import logging.handlers
-from PySide6.QtCore import QStandardPaths, QCoreApplication
+from PySide6.QtCore import QStandardPaths
 from constants import APP_NAME
 
 

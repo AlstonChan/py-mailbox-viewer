@@ -31,7 +31,6 @@ from PySide6.QtWidgets import (
 
 from mail_message import MailMessage
 from ui.selection_bar import SelectionBarWidget
-from logger_config import logger
 
 # How many extra rows to render above/below the visible area
 _BUFFER_ROWS = 4

@@ -23,8 +23,8 @@ from PySide6.QtWidgets import (
     QSizePolicy,
     QSpacerItem,
 )
+
 from constants import APP_NAME
-import resources_rc
 
 # Shared text interaction flags for all selectable labels
 _SELECTABLE_TEXT_FLAGS = (

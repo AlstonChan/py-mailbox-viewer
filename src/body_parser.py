@@ -39,9 +39,9 @@ def _extract_body_parts(
         # Iterate through message parts to find plain text and HTML
         for part in msg.walk():
             # Skip the multipart container itself and explicit attachments
+            disposition = part.get_content_disposition()
             if part.get_content_maintype() == "multipart" or (
-                part.get("Content-Disposition")
-                and part.get("Content-Disposition").startswith("attachment")
+                disposition and disposition == "attachment"
             ):
                 continue
 
@@ -52,6 +52,10 @@ def _extract_body_parts(
 
             payload = part.get_payload(decode=True)
             if payload is None:
+                continue
+
+            # Skip if payload is not bytes (e.g., Message objects in nested multipart)
+            if not isinstance(payload, bytes):
                 continue
 
             try:

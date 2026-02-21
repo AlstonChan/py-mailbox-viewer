@@ -73,8 +73,6 @@ class WelcomeFrame(object):
 
         QMetaObject.connectSlotsByName(WelcomeFrame)
 
-    # setupUi
-
     def _setup_logo_section(self, WelcomeFrame):
         """Set up the centred logo image at row 1."""
         self.horizontalLayoutLogo = QHBoxLayout()
@@ -234,5 +232,3 @@ class WelcomeFrame(object):
                 "WelcomeFrame", "Load a mail file to get started", None
             )
         )
-
-    # retranslateUi

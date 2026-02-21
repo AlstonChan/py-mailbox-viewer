@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
 from mail_message import MailMessage
 from utils import format_bytes
 from ui.common.ellipsis_label import EllipsisLabel

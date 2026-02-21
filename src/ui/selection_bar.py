@@ -26,6 +26,7 @@ from PySide6.QtWidgets import (
     QSpacerItem,
     QWidget,
 )
+
 from mail_message import MailMessage
 from utils import format_bytes
 from ui.common.ellipsis_label import EllipsisLabel
@@ -84,6 +85,9 @@ class SelectionBarWidget(QWidget):
                         )
                         self._pressed = True
                         self._press_pos = pos
+                        logger.debug(
+                            f"Mouse press at {pos} on {watched_widget.objectName()}"
+                        )
                 elif et == event.Type.MouseMove:
                     if self._pressed and self._press_pos is not None:
                         pos = watched_widget.mapTo(
@@ -91,6 +95,9 @@ class SelectionBarWidget(QWidget):
                         )
                         if (pos - self._press_pos).manhattanLength() >= 4:
                             self._pressed = False
+                            logger.debug(
+                                f"Mouse move at {pos} on {watched_widget.objectName()}, cancelling click"
+                            )
                 elif et == event.Type.MouseButtonRelease:
                     if (
                         mouse_event.button() == Qt.MouseButton.LeftButton
@@ -107,31 +114,12 @@ class SelectionBarWidget(QWidget):
             except Exception:
                 self._pressed = False
                 self._press_pos = None
+                logger.error(
+                    "Error in eventFilter for click forwarding",
+                    exc_info=True,
+                )
             return False
         return super().eventFilter(watched, event)
-
-    def mousePressEvent(self, event: QMouseEvent) -> None:
-        if event.button() == Qt.MouseButton.LeftButton:
-            self._pressed = True
-            self._press_pos = event.position().toPoint()
-        super().mousePressEvent(event)
-
-    def mouseMoveEvent(self, event: QMouseEvent) -> None:
-        # If user is selecting text or dragging, don't treat it as a click.
-        if self._pressed and self._press_pos is not None:
-            if (event.position().toPoint() - self._press_pos).manhattanLength() >= 4:
-                self._pressed = False
-        super().mouseMoveEvent(event)
-
-    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
-        if event.button() == Qt.MouseButton.LeftButton and self._pressed:
-            # Only emit if release happens inside the widget
-            if self.rect().contains(event.position().toPoint()):
-                logger.debug(f"Selection bar clicked: Index {self.index}")
-                self.clicked.emit(self.index)
-        self._pressed = False
-        self._press_pos = None
-        super().mouseReleaseEvent(event)
 
     def _setup_ui(self):
         if not self.objectName():
